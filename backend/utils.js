@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import mg from 'mailgun-js';
 
-// ✅ Base URL helper — works for local and production
+// Base URL helper
 export const baseUrl = () =>
   process.env.BASE_URL
     ? process.env.BASE_URL
@@ -9,7 +9,7 @@ export const baseUrl = () =>
     ? 'http://localhost:3000'
     : 'https://yourdomain.com';
 
-// ✅ Generate JWT token
+// Generate JWT token
 export const generateToken = (user) => {
   return jwt.sign(
     {
@@ -25,11 +25,11 @@ export const generateToken = (user) => {
   );
 };
 
-// ✅ Auth middleware
+// Auth middleware
 export const isAuth = (req, res, next) => {
   const authorization = req.headers.authorization;
   if (authorization) {
-    const token = authorization.slice(7, authorization.length); // Bearer XXXXXX
+    const token = authorization.slice(7, authorization.length); // Bearer XXXX
     jwt.verify(token, process.env.JWT_SECRET, (err, decode) => {
       if (err) {
         res.status(401).send({ message: 'Invalid Token' });
@@ -43,7 +43,7 @@ export const isAuth = (req, res, next) => {
   }
 };
 
-// ✅ Admin check middleware
+// Admin check middleware
 export const isAdmin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
     next();
@@ -52,14 +52,14 @@ export const isAdmin = (req, res, next) => {
   }
 };
 
-// ✅ Mailgun config — typo fixed
+// Mailgun config
 export const mailgun = () =>
   mg({
     apiKey: process.env.MAILGUN_API_KEY,
-    domain: process.env.MAILGUN_DOMAIN, // ✅ correct spelling
+    domain: process.env.MAILGUN_DOMAIN,
   });
 
-// ✅ Order confirmation email template
+// Order confirmation email template
 export const payOrderEmailTemplate = (order) => {
   return `<h1>Thanks for shopping with us</h1>
   <p>Hi ${order.user.name},</p>
