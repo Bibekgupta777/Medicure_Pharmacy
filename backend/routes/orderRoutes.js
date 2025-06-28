@@ -1,5 +1,4 @@
 import express from 'express';
-import pdfKit from 'pdfkit';
 import expressAsyncHandler from 'express-async-handler';
 import Order from '../models/orderModel.js';
 import User from '../models/userModel.js';
@@ -8,27 +7,34 @@ import { isAuth, isAdmin, mailgun, payOrderEmailTemplate } from '../utils.js';
 
 const orderRouter = express.Router();
 
+// Admin: get all orders with user info and payment info
 orderRouter.get(
   '/',
   isAuth,
   isAdmin,
   expressAsyncHandler(async (req, res) => {
-    const orders = await Order.find().populate('user', 'name');
+    const orders = await Order.find().populate('user', 'name email');
     res.send(orders);
   })
 );
 
+// User: create new order
 orderRouter.post(
   '/',
   isAuth,
   expressAsyncHandler(async (req, res) => {
+    if (!req.body.orderItems || req.body.orderItems.length === 0) {
+      res.status(400).send({ message: 'Cart is empty' });
+      return;
+    }
+
     const newOrder = new Order({
       orderItems: req.body.orderItems.map((x) => ({ ...x, product: x._id })),
       shippingAddress: req.body.shippingAddress,
       paymentMethod: req.body.paymentMethod,
       itemsPrice: req.body.itemsPrice,
       shippingPrice: req.body.shippingPrice,
-      DiscountPrice: req.body.DiscountPrice,
+      discountPrice: req.body.discountPrice,
       totalPrice: req.body.totalPrice,
       user: req.user._id,
     });
@@ -38,28 +44,16 @@ orderRouter.post(
   })
 );
 
+// Get summary stats (admin)
 orderRouter.get(
   '/summary',
   isAuth,
   isAdmin,
   expressAsyncHandler(async (req, res) => {
     const orders = await Order.aggregate([
-      {
-        $group: {
-          _id: null,
-          numOrders: { $sum: 1 },
-          totalSales: { $sum: '$totalPrice' },
-        },
-      },
+      { $group: { _id: null, numOrders: { $sum: 1 }, totalSales: { $sum: '$totalPrice' } } },
     ]);
-    const users = await User.aggregate([
-      {
-        $group: {
-          _id: null,
-          numUsers: { $sum: 1 },
-        },
-      },
-    ]);
+    const users = await User.aggregate([{ $group: { _id: null, numUsers: { $sum: 1 } } }]);
     const dailyOrders = await Order.aggregate([
       {
         $group: {
@@ -71,17 +65,13 @@ orderRouter.get(
       { $sort: { _id: 1 } },
     ]);
     const productCategories = await Product.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-        },
-      },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
     ]);
     res.send({ users, orders, dailyOrders, productCategories });
   })
 );
 
+// User: get orders of logged-in user
 orderRouter.get(
   '/mine',
   isAuth,
@@ -91,81 +81,12 @@ orderRouter.get(
   })
 );
 
-orderRouter.get(
-  '/:id/report',
-  isAuth,
-  expressAsyncHandler(async (req, res) => {
-    const orderId = req.params.id;
-    const order = await Order.findById(orderId).populate('user').populate('orderItems.product');
-
-    if (order) {
-      const doc = new pdfKit();
-
-      doc.text(`Order ID: ${order._id}`);
-      doc.text(`Date: ${order.createdAt.toDateString()}`);
-
-      // Add delivery price
-      const deliveryPrice = 10;
-
-      // Calculate total order price before discount and delivery charge
-      let totalPriceBeforeDiscount = 0;
-
-      doc.text(`User Name: ${order.user.name}`);
-      doc.text(`Shipping Address:`);
-      doc.text(`   Full Name: ${order.shippingAddress.fullName}`);
-      doc.text(`   Address: ${order.shippingAddress.address}`);
-      doc.text(`   City: ${order.shippingAddress.city}`);
-      doc.text(`   Postal Code: ${order.shippingAddress.postalCode}`);
-      doc.text(`   Country: ${order.shippingAddress.country}`);
-
-      doc.text('\nOrdered Items:');
-
-      order.orderItems.forEach((item, index) => {
-        const itemTotalPrice = item.quantity * item.price;
-        totalPriceBeforeDiscount += itemTotalPrice;
-
-        doc.text(`S.No: ${index + 1}`);
-        doc.text(`- Product: ${item.product.name}`);
-        doc.text(`  Quantity: ${item.quantity}`);
-        doc.text(`  Price: Rs ${item.price.toFixed(2)}`);
-        doc.text(`  Total Price (before discount): Rs ${itemTotalPrice.toFixed(2)}`);
-        doc.text(''); // Empty line for separation
-      });
-
-      // Apply discount
-      const discountPercentage = 10;
-      const discountAmount = (totalPriceBeforeDiscount * discountPercentage) / 100;
-
-      // Add delivery charge
-      const totalPriceAfterDelivery = totalPriceBeforeDiscount + deliveryPrice;
-
-      // Calculate total order price after discount and delivery charge
-      const totalPriceAfterDiscountAndDelivery = totalPriceBeforeDiscount - discountAmount + deliveryPrice;
-
-      doc.text(`Discount Amount: -Rs ${discountAmount.toFixed(2)}`);
-      doc.text(`Delivery Charge: +Rs ${deliveryPrice.toFixed(2)}`);
-      doc.text(`Total Order Price (before discount and delivery): Rs ${totalPriceAfterDelivery.toFixed(2)}`);
-      doc.text(`Total Order Price (after discount and delivery): Rs ${totalPriceAfterDiscountAndDelivery.toFixed(2)}`);
-
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=OrderReport_${order._id}.pdf`);
-
-      doc.pipe(res);
-      doc.end();
-    } else {
-      res.status(404).json({ message: 'Order not found' });
-    }
-  })
-);
-
-
-
-
+// Get order by id
 orderRouter.get(
   '/:id',
   isAuth,
   expressAsyncHandler(async (req, res) => {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
     if (order) {
       res.send(order);
     } else {
@@ -174,6 +95,57 @@ orderRouter.get(
   })
 );
 
+// Update order as paid
+orderRouter.put(
+  '/:id/pay',
+  isAuth,
+  expressAsyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id).populate('user', 'email name');
+    if (order) {
+      order.isPaid = true;
+      order.paidAt = Date.now();
+
+      order.paymentResult = {
+        id: req.body.id || '',           // Payment gateway payment id (e.g., Stripe PaymentIntent id)
+        status: req.body.status || '',   // Payment status (e.g., 'succeeded')
+        update_time: req.body.update_time || '', // Payment update timestamp
+        email_address: req.body.email_address || '', // Payer email address
+      };
+
+      // Save payment method explicitly to distinguish COD vs Stripe etc.
+      if (req.body.paymentMethod) {
+        order.paymentMethod = req.body.paymentMethod;
+      }
+
+      const updatedOrder = await order.save();
+
+      // Send email notification on payment
+      mailgun()
+        .messages()
+        .send(
+          {
+            from: 'yourstore <no-reply@yourdomain.com>',
+            to: `${order.user.name} <${order.user.email}>`,
+            subject: `Order Paid: ${order._id}`,
+            html: payOrderEmailTemplate(order),
+          },
+          (error, body) => {
+            if (error) {
+              console.error(error);
+            } else {
+              console.log(body);
+            }
+          }
+        );
+
+      res.send({ message: 'Order Paid', order: updatedOrder });
+    } else {
+      res.status(404).send({ message: 'Order Not Found' });
+    }
+  })
+);
+
+// Update order as delivered
 orderRouter.put(
   '/:id/deliver',
   isAuth,
@@ -190,50 +162,7 @@ orderRouter.put(
   })
 );
 
-orderRouter.put(
-  '/:id/pay',
-  isAuth,
-  expressAsyncHandler(async (req, res) => {
-    const order = await Order.findById(req.params.id).populate(
-      'user',
-      'email name'
-    );
-    if (order) {
-      order.isPaid = true;
-      order.paidAt = Date.now();
-      order.paymentResult = {
-        id: req.body.id,
-        status: req.body.status,
-        update_time: req.body.update_time,
-        email_address: req.body.email_address,
-      };
-
-      const updatedOrder = await order.save();
-      mailgun()
-        .messages()
-        .send(
-          {
-            from: 'foodie <foodie@mg.yourdomain.com>',
-            to: `${order.user.name} <${order.user.email}>`,
-            subject: `New order ${order._id}`,
-            html: payOrderEmailTemplate(order),
-          },
-          (error, body) => {
-            if (error) {
-              console.log(error);
-            } else {
-              console.log(body);
-            }
-          }
-        );
-
-      res.send({ message: 'Order Paid', order: updatedOrder });
-    } else {
-      res.status(404).send({ message: 'Order Not Found' });
-    }
-  })
-);
-
+// Delete order (admin or owner)
 orderRouter.delete(
   '/:id',
   isAuth,
@@ -241,8 +170,7 @@ orderRouter.delete(
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
 
-    
-    if (req.user.role === 'admin' || (order && order.user.equals(req.user._id))) {
+    if (req.user.isAdmin || (order && order.user.equals(req.user._id))) {
       if (order) {
         await order.remove();
         res.send({ message: 'Order Deleted' });
@@ -250,7 +178,7 @@ orderRouter.delete(
         res.status(404).send({ message: 'Order Not Found' });
       }
     } else {
-      res.status(403).send({ message: 'User does not have permission to delete this order.' });
+      res.status(403).send({ message: 'Not authorized to delete this order.' });
     }
   })
 );
