@@ -7,7 +7,7 @@ import { isAuth, isAdmin, mailgun, payOrderEmailTemplate } from '../utils.js';
 
 const orderRouter = express.Router();
 
-// Admin: get all orders with user info and payment info
+// Admin: get all orders
 orderRouter.get(
   '/',
   isAuth,
@@ -44,7 +44,7 @@ orderRouter.post(
   })
 );
 
-// Get summary stats (admin)
+// summary
 orderRouter.get(
   '/summary',
   isAuth,
@@ -64,14 +64,12 @@ orderRouter.get(
       },
       { $sort: { _id: 1 } },
     ]);
-    const productCategories = await Product.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-    ]);
+    const productCategories = await Product.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }]);
     res.send({ users, orders, dailyOrders, productCategories });
   })
 );
 
-// User: get orders of logged-in user
+// get orders for logged-in user
 orderRouter.get(
   '/mine',
   isAuth,
@@ -81,7 +79,7 @@ orderRouter.get(
   })
 );
 
-// Get order by id
+// get by id
 orderRouter.get(
   '/:id',
   isAuth,
@@ -95,7 +93,7 @@ orderRouter.get(
   })
 );
 
-// Update order as paid
+// pay
 orderRouter.put(
   '/:id/pay',
   isAuth,
@@ -104,22 +102,17 @@ orderRouter.put(
     if (order) {
       order.isPaid = true;
       order.paidAt = Date.now();
-
       order.paymentResult = {
-        id: req.body.id || '',           // Payment gateway payment id (e.g., Stripe PaymentIntent id)
-        status: req.body.status || '',   // Payment status (e.g., 'succeeded')
-        update_time: req.body.update_time || '', // Payment update timestamp
-        email_address: req.body.email_address || '', // Payer email address
+        id: req.body.id || '',
+        status: req.body.status || '',
+        update_time: req.body.update_time || '',
+        email_address: req.body.email_address || '',
       };
-
-      // Save payment method explicitly to distinguish COD vs Stripe etc.
       if (req.body.paymentMethod) {
         order.paymentMethod = req.body.paymentMethod;
       }
-
       const updatedOrder = await order.save();
 
-      // Send email notification on payment
       mailgun()
         .messages()
         .send(
@@ -145,40 +138,64 @@ orderRouter.put(
   })
 );
 
-// Update order as delivered
+// deliver
 orderRouter.put(
   '/:id/deliver',
   isAuth,
+  isAdmin,
   expressAsyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (order) {
       order.isDelivered = true;
       order.deliveredAt = Date.now();
+      order.deliveryStatus = 'delivered'; // ✅ update status as well
       await order.save();
-      res.send({ message: 'Order Delivered' });
+      res.send({ message: 'Order Delivered', order });
     } else {
       res.status(404).send({ message: 'Order Not Found' });
     }
   })
 );
 
-// Delete order (admin or owner)
-orderRouter.delete(
-  '/:id',
+// cancel
+orderRouter.put(
+  '/:id/cancel',
   isAuth,
   expressAsyncHandler(async (req, res) => {
-    const orderId = req.params.id;
-    const order = await Order.findById(orderId);
-
-    if (req.user.isAdmin || (order && order.user.equals(req.user._id))) {
-      if (order) {
-        await order.remove();
-        res.send({ message: 'Order Deleted' });
+    const order = await Order.findById(req.params.id);
+    if (order) {
+      if (req.user.isAdmin || order.user.toString() === req.user._id.toString()) {
+        order.isCancelled = true;
+        order.deliveryStatus = 'cancelled'; // ✅ update status as well
+        await order.save();
+        res.send({ message: 'Order cancelled', order });
       } else {
-        res.status(404).send({ message: 'Order Not Found' });
+        res.status(403).send({ message: 'Not authorized to cancel this order' });
       }
     } else {
-      res.status(403).send({ message: 'Not authorized to delete this order.' });
+      res.status(404).send({ message: 'Order not found' });
+    }
+  })
+);
+
+// ✅ NEW: admin update delivery status (eg: pending → out for delivery)
+orderRouter.put(
+  '/:id/status',
+  isAuth,
+  isAdmin,
+  expressAsyncHandler(async (req, res) => {
+    const { deliveryStatus } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (order) {
+      order.deliveryStatus = deliveryStatus;
+      if (deliveryStatus === 'delivered') {
+        order.isDelivered = true;
+        order.deliveredAt = Date.now();
+      }
+      await order.save();
+      res.send({ message: 'Delivery status updated', order });
+    } else {
+      res.status(404).send({ message: 'Order not found' });
     }
   })
 );
