@@ -47,6 +47,14 @@ const orderSchema = new mongoose.Schema(
     paidAt: { type: Date },
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
+    isCancelled: { type: Boolean, default: false },
+
+    // ✅ NEW delivery status field
+    deliveryStatus: {
+      type: String,
+      enum: ['pending', 'out for delivery', 'delivered', 'cancelled'],
+      default: 'pending',
+    },
   },
   {
     timestamps: true,
