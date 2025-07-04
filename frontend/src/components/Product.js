@@ -5,13 +5,14 @@ import axios from 'axios';
 import { Store } from '../Store';
 import { toast } from 'react-toastify';
 
-export default function Product({ product, imgClassName }) {
+export default function Product({ product, imgClassName, addToCartHandler }) {
+  // Use addToCartHandler from props if passed (from HomeScreen), else fallback to internal handler
   const { state, dispatch: ctxDispatch } = useContext(Store);
   const {
     cart: { cartItems },
   } = state;
 
-  const addToCartHandler = async () => {
+  const internalAddToCartHandler = async () => {
     const existItem = cartItems.find((x) => x._id === product._id);
     const quantity = existItem ? existItem.quantity + 1 : 1;
 
@@ -26,11 +27,12 @@ export default function Product({ product, imgClassName }) {
         payload: { ...product, quantity },
       });
       toast.success('Added to cart!');
-      // Removed navigate('/cart'); to prevent navigation
     } catch (err) {
       toast.error('Failed to add to cart');
     }
   };
+
+  const handleAddToCart = addToCartHandler || internalAddToCartHandler;
 
   const formatPrice = (price) =>
     price.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
@@ -38,127 +40,266 @@ export default function Product({ product, imgClassName }) {
   return (
     <>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
         .product-card {
-          max-width: 460px;
-          border-radius: 20px;
+          max-width: 320px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
           overflow: hidden;
-          box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-          transition: box-shadow 0.35s ease, transform 0.35s ease;
-          background: #fff;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          margin: 1rem auto;
           display: flex;
           flex-direction: column;
-          cursor: pointer;
-          user-select: none;
-          margin: 1rem auto;
+          position: relative;
         }
+
         .product-card:hover {
-          box-shadow: 0 12px 36px rgba(0,0,0,0.18);
-          transform: translateY(-8px);
+          transform: translateY(-4px);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          border-color: #d1d5db;
         }
+
+        .product-image-container {
+          position: relative;
+          overflow: hidden;
+          background: #f8fafc;
+          aspect-ratio: 1;
+        }
+
         .product-image {
-          height: 200px;
           width: 100%;
+          height: 100%;
           object-fit: cover;
-          background: #f0f0f0;
-          border-bottom: 1px solid #eee;
-          transition: transform 0.5s ease;
-          border-top-left-radius: 20px;
-          border-top-right-radius: 20px;
+          transition: transform 0.4s ease;
         }
+
         .product-card:hover .product-image {
-          transform: scale(1.08);
+          transform: scale(1.05);
         }
-        .product-info {
-          padding: 20px 22px;
+
+        .stock-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          backdrop-filter: blur(4px);
+        }
+
+        .stock-badge.in-stock {
+          background: rgba(16, 185, 129, 0.9);
+        }
+
+        .stock-badge.out-of-stock {
+          background: rgba(239, 68, 68, 0.9);
+        }
+
+        .product-content {
+          padding: 20px;
           flex-grow: 1;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
         }
+
         .product-title {
-          font-size: 1.4rem;
-          font-weight: 700;
-          color: #333;
-          margin: 0 0 12px 0;
-          line-height: 1.3;
-          text-align: center;
-          min-height: 64px;
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #111827;
+          margin: 0 0 8px 0;
+          line-height: 1.4;
           text-decoration: none;
-          transition: color 0.3s ease;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          min-height: 2.8rem;
+          transition: color 0.2s ease;
         }
+
         .product-title:hover,
         .product-title:focus {
-          color: #007bff;
-          text-decoration: underline;
-          outline: none;
+          color: #3b82f6;
+          text-decoration: none;
         }
+
         .product-price {
           font-size: 1.5rem;
           font-weight: 700;
-          color: #28a745;
-          margin-bottom: 22px;
-          text-align: center;
+          color: #059669;
+          margin: 12px 0 20px 0;
+          letter-spacing: -0.025em;
         }
-        .btn-add {
-          background: linear-gradient(135deg, #2ecc71, #27ae60);
-          border: none;
-          font-weight: 700;
-          border-radius: 30px;
-          padding: 14px 0;
-          width: 100%;
-          font-size: 1.15rem;
+
+        .add-to-cart-btn {
+          background: #3b82f6;
+          border: 1px solid #3b82f6;
           color: white;
-          box-shadow: 0 6px 12px rgba(39, 174, 96, 0.6);
-          transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+          font-weight: 600;
+          font-size: 0.875rem;
+          padding: 12px 20px;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+          margin-top: auto;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
-        .btn-add:hover {
-          background: linear-gradient(135deg, #27ae60, #229954);
-          box-shadow: 0 10px 20px rgba(39, 174, 96, 0.85);
-          transform: scale(1.05);
+
+        .add-to-cart-btn:hover:not(:disabled) {
+          background: #2563eb;
+          border-color: #2563eb;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+          color: white;
         }
-        .btn-add:active {
-          transform: scale(0.95);
+
+        .add-to-cart-btn:active:not(:disabled) {
+          transform: translateY(0);
         }
-        .btn-disabled {
-          background-color: #b0b0b0 !important;
-          cursor: not-allowed !important;
-          opacity: 0.65 !important;
-          box-shadow: none !important;
-          color: #eee !important;
-          font-weight: 700 !important;
-          border-radius: 30px !important;
-          padding: 14px 0 !important;
-          width: 100% !important;
-          font-size: 1.15rem !important;
+
+        .add-to-cart-btn:disabled {
+          background: #f3f4f6;
+          border-color: #e5e7eb;
+          color: #9ca3af;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .cart-icon {
+          width: 16px;
+          height: 16px;
+          fill: currentColor;
+        }
+
+        .product-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+
+        .availability-text {
+          font-weight: 500;
+        }
+
+        .availability-text.in-stock {
+          color: #059669;
+        }
+
+        .availability-text.low-stock {
+          color: #d97706;
+        }
+
+        .availability-text.out-of-stock {
+          color: #dc2626;
+        }
+
+        .product-link {
+          text-decoration: none;
+          color: inherit;
+        }
+
+        .product-link:hover {
+          text-decoration: none;
+          color: inherit;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .product-card {
+            max-width: 280px;
+          }
+          
+          .product-content {
+            padding: 16px;
+          }
+          
+          .product-title {
+            font-size: 1rem;
+          }
+          
+          .product-price {
+            font-size: 1.25rem;
+          }
+        }
+
+        /* Focus states for accessibility */
+        .product-card:focus-within {
+          outline: 2px solid #3b82f6;
+          outline-offset: 2px;
+        }
+
+        .add-to-cart-btn:focus {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
         }
       `}</style>
 
       <Card className="product-card" role="group" aria-label={`Product: ${product.name}`}>
-        <Link to={`/product/${product.slug}`} tabIndex={-1}>
-          <Card.Img
-            variant="top"
-            src={product.image}
-            alt={product.name}
-            className={`product-image ${imgClassName || ''}`}
-          />
-        </Link>
-        <Card.Body className="product-info">
+        <div className="product-image-container">
+          <Link to={`/product/${product.slug}`} className="product-link" tabIndex={-1}>
+            <Card.Img
+              variant="top"
+              src={product.image}
+              alt={product.name}
+              className={`product-image ${imgClassName || ''}`}
+            />
+          </Link>
+          <div className={`stock-badge ${product.countInStock === 0 ? 'out-of-stock' : 'in-stock'}`}>
+            {product.countInStock === 0 ? 'Out of Stock' : 'In Stock'}
+          </div>
+        </div>
+
+        <div className="product-content">
+          <div className="product-meta">
+            <span className={`availability-text ${
+              product.countInStock === 0 ? 'out-of-stock' : 
+              product.countInStock <= 5 ? 'low-stock' : 'in-stock'
+            }`}>
+              {product.countInStock === 0 ? 'Unavailable' : 
+               product.countInStock <= 5 ? `Only ${product.countInStock} left` : 'Available'}
+            </span>
+          </div>
+
           <Link to={`/product/${product.slug}`} className="product-title">
             {product.name}
           </Link>
+
           <div className="product-price">
             {formatPrice(product.price)}
           </div>
+
           {product.countInStock === 0 ? (
-            <Button variant="secondary" disabled className="btn-disabled">
+            <Button variant="secondary" disabled className="add-to-cart-btn">
+              <svg className="cart-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V17C17 18.1 16.1 19 15 19H9C7.9 19 7 18.1 7 17V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
               Out of Stock
             </Button>
           ) : (
-            <Button variant="success" onClick={addToCartHandler} className="btn-add">
+            <Button variant="primary" onClick={handleAddToCart} className="add-to-cart-btn">
+              <svg className="cart-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V17C17 18.1 16.1 19 15 19H9C7.9 19 7 18.1 7 17V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 8V12M12 12V16M12 12H8M12 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               Add to Cart
             </Button>
           )}
-        </Card.Body>
+        </div>
       </Card>
     </>
   );
