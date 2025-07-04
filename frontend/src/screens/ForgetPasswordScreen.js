@@ -5,15 +5,14 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { Store } from '../Store';
-import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function ForgetPasswordScreen() {
   const navigate = useNavigate();
-  
+
   const [email, setEmail] = useState('');
-  const [recaptchaValue, setRecaptchaValue] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const { state } = useContext(Store);
   const { userInfo } = state;
@@ -26,48 +25,55 @@ export default function ForgetPasswordScreen() {
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      if (!recaptchaValue) {
-        toast.error('Please complete the reCAPTCHA verification');
-        return;
-      }
-
-      const { data } = await Axios.post('/api/users/forget-password', {
-        email,
-        recaptchaValue,
-      });
+      const { data } = await Axios.post('/api/users/forgot-password', { email });
       toast.success(data.message);
+      setEmail('');
     } catch (err) {
       toast.error(err.response ? err.response.data.message : 'Something went wrong');
     }
+    setLoading(false);
   };
 
   return (
-    <Container className="small-container">
+    <Container
+      className="small-container"
+      style={{
+        maxWidth: '450px',
+        marginTop: '4rem',
+        padding: '2rem',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        borderRadius: '8px',
+        backgroundColor: '#fff',
+      }}
+    >
       <Helmet>
-        <title>Forget Password</title>
+        <title>Forgot Password</title>
       </Helmet>
-      <h1 className="my-3">Forget Password</h1>
+      <ToastContainer position="top-center" />
+      <h1 className="mb-4 text-center" style={{ fontWeight: '700', color: '#333' }}>
+        Forgot Password
+      </h1>
+
       <Form onSubmit={submitHandler}>
-        <Form.Group className="mb-3" controlId="email">
-          <Form.Label>Email</Form.Label>
+        <Form.Group className="mb-4" controlId="email">
+          <Form.Label style={{ fontWeight: '600', fontSize: '1.1rem' }}>Email Address</Form.Label>
           <Form.Control
             type="email"
-            required
+            placeholder="Enter your registered email"
+            value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
+            autoFocus
+            style={{ padding: '0.75rem', fontSize: '1rem' }}
           />
         </Form.Group>
 
-        <Form.Group className="mb-3">
-         
-          <ReCAPTCHA
-            sitekey="6Lf7eyQpAAAAABP44pO0L6bvtrOV5FnLLk1kGIrR"
-            onChange={(value) => setRecaptchaValue(value)}
-          />
-        </Form.Group>
-
-        <div className="mb-3">
-          <Button type="submit">Submit</Button>
+        <div className="d-grid">
+          <Button type="submit" disabled={loading} style={{ padding: '0.75rem', fontSize: '1.1rem' }}>
+            {loading ? 'Submitting...' : 'Submit'}
+          </Button>
         </div>
       </Form>
     </Container>
