@@ -40,12 +40,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
 import Aboutus from './screens/Aboutus';
 import Feedback from './screens/Feedback';
+import MessageListScreen from './screens/AdminMessagesScreen'; // <<< create this later
 
 // stripe
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
-// load your publishable key
 const stripePromise = loadStripe('pk_test_51R3qvbJ8hHU1KUt5dEQTr5HLlPrd0wKpnDujH4XIy6kaU3LMkzTnOZbCF6rxWtATYQQ6F5e2oayDYsQSMTJWocj500Cvyp5WBn');
 
 function App() {
@@ -85,11 +85,12 @@ function App() {
           display: 'flex',
           flexDirection: 'column',
           overflowX: 'hidden',
+          gap: "0"
         }}
         className={
           sidebarIsOpen
             ? 'site-container active-cont d-flex flex-column'
-            : 'site-container d-flex flex-column'
+            : 'site-container d-flex flex-column m-0'
         }
       >
         <ToastContainer position="bottom-center" limit={1} />
@@ -100,6 +101,8 @@ function App() {
               backgroundColor: 'lightblue',
               minHeight: '110px',
               zIndex: 1000,
+              margin: "0",
+              padding: "0"
             }}
             variant="light"
             expand="lg"
@@ -141,6 +144,9 @@ function App() {
                     </LinkContainer>
                     <LinkContainer to="/admin/users">
                       <Nav.Link className="text-black">Users</Nav.Link>
+                    </LinkContainer>
+                    <LinkContainer to="/admin/messages">
+                      <Nav.Link className="text-black">Contact</Nav.Link>
                     </LinkContainer>
                     <NavDropdown
                       title={
@@ -264,34 +270,7 @@ function App() {
           </Navbar>
         </header>
 
-        <div
-          className={
-            sidebarIsOpen
-              ? 'active-nav side-navbar d-flex justify-content-between flex-wrap flex-column'
-              : 'side-navbar d-flex justify-content-between flex-wrap flex-column'
-          }
-        >
-          <Nav className="flex-column text-white w-100 p-2">
-            <Nav.Item>
-              <strong>Categories</strong>
-            </Nav.Item>
-            {categories.map((category) => (
-              <Nav.Item key={category}>
-                <LinkContainer
-                  to={{
-                    pathname: '/search',
-                    search: `category=${category}`,
-                  }}
-                  onClick={() => setSidebarIsOpen(false)}
-                >
-                  <Nav.Link className="text-black">{category}</Nav.Link>
-                </LinkContainer>
-              </Nav.Item>
-            ))}
-          </Nav>
-        </div>
-
-        <main style={{ paddingTop: '120px' }}>
+        <main style={{ paddingTop: '111px' }}>
           <Container fluid className="p-0 m-0">
             <Routes>
               <Route path="/" element={<HomeScreen />} />
@@ -304,8 +283,8 @@ function App() {
               <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/aboutus" element={<Aboutus />} />
+              <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
 
-              {/* Wrap StripeCheckoutForm in Elements provider */}
               <Route
                 path="/payment/stripe"
                 element={
@@ -314,7 +293,6 @@ function App() {
                   </Elements>
                 }
               />
-
               <Route
                 path="/profile"
                 element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>}
@@ -323,13 +301,9 @@ function App() {
                 path="/map"
                 element={<ProtectedRoute><MapScreen /></ProtectedRoute>}
               />
-
-              {/* You can keep PlaceOrderScreen as is, or wrap with Elements if you want */}
-              <Route
-                path="/placeorder"
-                element={<PlaceOrderScreen />}
-              />
-
+              <Route path="/shipping" element={<ShippingAddressScreen />} />
+              <Route path="/payment" element={<PaymentMethodScreen />} />
+              <Route path="/placeorder" element={<PlaceOrderScreen />} />
               <Route
                 path="/order/:id"
                 element={<ProtectedRoute><OrderScreen /></ProtectedRoute>}
@@ -338,8 +312,6 @@ function App() {
                 path="/orderhistory"
                 element={<ProtectedRoute><OrderHistoryScreen /></ProtectedRoute>}
               />
-              <Route path="/shipping" element={<ShippingAddressScreen />} />
-              <Route path="/payment" element={<PaymentMethodScreen />} />
               <Route
                 path="/admin/dashboard"
                 element={<AdminRoute><DashboardScreen /></AdminRoute>}
@@ -364,10 +336,13 @@ function App() {
                 path="/admin/user/:id"
                 element={<AdminRoute><UserEditScreen /></AdminRoute>}
               />
+              <Route
+                path="/admin/messages"
+                element={<AdminRoute><MessageListScreen /></AdminRoute>}
+              />
             </Routes>
           </Container>
         </main>
-
         <footer />
       </div>
     </BrowserRouter>
