@@ -81,7 +81,7 @@ function HomeScreen() {
 
   const bannerData = [
     { id: 0, title: 'All Products', subtitle: 'See Everything', category: '', image: '/images/cat.jpg', bgColor: '#6c5ce7', textColor: 'white' },
-    { id: 1, title: 'MEGA SALE', subtitle: 'Up to 50% OFF', category: 'Mega Sale', image: '/images/hero.jpeg', bgColor: '#ff4757', textColor: 'white' },
+    
     { id: 3, title: 'Skin Care', subtitle: 'Premium Products', category: 'Skin Care', image: '/images/skin.jpg', bgColor: '#2ed573', textColor: 'white' },
     { id: 4, title: 'Vitamins', subtitle: 'Health Boost', category: 'Vitamins', image: '/images/vita.jpg', bgColor: '#ffa502', textColor: 'white' },
     { id: 5, title: 'Baby Care', subtitle: 'Gentle & Safe', category: 'Baby Care', image: '/images/baby.jpg', bgColor: '#ff6b9d', textColor: 'white' },
@@ -466,7 +466,7 @@ function HomeScreen() {
             <>
               <Row className="justify-content-center g-4">
                 {currentProducts.map((product) => (
-                  <Col key={product.slug} xs={6} sm={4} md={3} lg={2} xl={2} className="product-card-wrapper">
+                  <Col key={product.slug} xs={1} sm={1} md={2} lg={3} xl={3} className="product-card-wrapper">
                     <Product product={product} addToCartHandler={() => addToCartHandler(product)} />
                   </Col>
                 ))}
