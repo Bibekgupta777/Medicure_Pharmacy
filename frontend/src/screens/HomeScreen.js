@@ -80,13 +80,15 @@ function HomeScreen() {
   ];
 
   const bannerData = [
-    { id: 0, title: 'All Products', subtitle: 'See Everything', category: '', image: '/images/cat.jpg', bgColor: '#6c5ce7', textColor: 'white' },
     
-    { id: 3, title: 'Skin Care', subtitle: 'Premium Products', category: 'Skin Care', image: '/images/skin.jpg', bgColor: '#2ed573', textColor: 'white' },
-    { id: 4, title: 'Vitamins', subtitle: 'Health Boost', category: 'Vitamins', image: '/images/vita.jpg', bgColor: '#ffa502', textColor: 'white' },
-    { id: 5, title: 'Baby Care', subtitle: 'Gentle & Safe', category: 'Baby Care', image: '/images/baby.jpg', bgColor: '#ff6b9d', textColor: 'white' },
-    { id: 6, title: 'Wellness', subtitle: 'Stay Healthy', category: 'Wellness', image: '/images/wel.jpg', bgColor: '#7bed9f', textColor: 'white' },
-  ];
+  { id: 0, title: 'All Products', subtitle: 'See Everything', category: '', image: '/images/cat.jpg', bgColor: '#6c5ce7', textColor: 'white' },
+  { id: 3, title: 'Skin Care', subtitle: 'Premium Products', category: 'Skin Care', image: '/images/skin.jpg', bgColor: '#2ed573', textColor: 'white' },
+  { id: 4, title: 'Vitamins', subtitle: 'Health Boost', category: 'Vitamins', image: '/images/vita.jpg', bgColor: '#ffa502', textColor: 'white' },
+  { id: 5, title: 'Baby Care', subtitle: 'Gentle & Safe', category: 'Baby Care', image: '/images/baby.jpg', bgColor: '#ff6b9d', textColor: 'white' },
+  { id: 6, title: 'Wellness', subtitle: 'Stay Healthy', category: 'Wellness', image: '/images/wel.jpg', bgColor: '#7bed9f', textColor: 'white' },
+  { id: 7, title: 'Band Product', subtitle: 'Quality Supports', category: 'Band Product', image: '/images/band.jpg', bgColor: '#ff4757', textColor: 'white' }
+];
+
 
   const filteredProducts = categoryFilter
     ? products.filter((p) => p.category === categoryFilter)

@@ -8,7 +8,7 @@ router.post('/', async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
 
-    // Validate required fields (optional but recommended)
+    // Validate required fields
     if (!name || !email || !subject || !message) {
       return res.status(400).json({ message: 'Please fill all required fields.' });
     }
@@ -22,7 +22,6 @@ router.post('/', async (req, res) => {
     });
 
     const savedMessage = await newMessage.save();
-
     res.status(201).json(savedMessage);
   } catch (error) {
     console.error('Error saving message:', error);
@@ -30,7 +29,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get all messages (for admin dashboard)
+// Get all messages (for admin)
 router.get('/', async (req, res) => {
   try {
     const messages = await Message.find().sort({ createdAt: -1 });
@@ -41,7 +40,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Delete a message
+// Delete a message by ID
 router.delete('/:id', async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);

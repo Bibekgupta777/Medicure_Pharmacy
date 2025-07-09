@@ -158,6 +158,7 @@ export default function ProductEditScreen() {
               <option value="Wellness">Wellness</option>
               <option value="Mega Sale">Mega Sale</option>
               <option value="Categories">Categories</option>
+              <option value="Band Product">Band Product</option> {/* ✅ added */}
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3">

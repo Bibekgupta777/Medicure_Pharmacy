@@ -40,7 +40,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
 import Aboutus from './screens/Aboutus';
 import Feedback from './screens/Feedback';
-import MessageListScreen from './screens/AdminMessagesScreen'; // <<< create this later
+import MessageListScreen from './screens/AdminMessagesScreen';
+import BandProductPrescriptionScreen from './screens/BandProductPrescriptionScreen'; // <-- import new screen
 
 // stripe
 import { Elements } from '@stripe/react-stripe-js';
@@ -148,6 +149,12 @@ function App() {
                     <LinkContainer to="/admin/messages">
                       <Nav.Link className="text-black">Contact</Nav.Link>
                     </LinkContainer>
+
+                    {/* NEW BAND PRODUCT LINK */}
+                    <LinkContainer to="/admin/prescriptions">
+                      <Nav.Link className="text-black">Band Product</Nav.Link>
+                    </LinkContainer>
+
                     <NavDropdown
                       title={
                         <>
@@ -339,6 +346,12 @@ function App() {
               <Route
                 path="/admin/messages"
                 element={<AdminRoute><MessageListScreen /></AdminRoute>}
+              />
+
+              {/* New Band Product Prescriptions Route */}
+              <Route
+                path="/admin/prescriptions"
+                element={<AdminRoute><BandProductPrescriptionScreen /></AdminRoute>}
               />
             </Routes>
           </Container>
