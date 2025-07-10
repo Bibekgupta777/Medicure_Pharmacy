@@ -8,7 +8,7 @@ import Card from "react-bootstrap/Card";
 import Footer from "../components/Footer";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";  // <-- import Modal
+import Modal from "react-bootstrap/Modal";
 import { toast } from "react-toastify";
 import { getError } from "../utils";
 import { Store } from "../Store";
@@ -56,13 +56,25 @@ export default function PlaceOrderScreen() {
   cart.discountPrice = round2(0.1 * cart.itemsPrice);
   cart.totalPrice = cart.itemsPrice + cart.shippingPrice - cart.discountPrice;
 
+  // Clean orderItems before sending (remove any File objects)
+  const cleanOrderItems = cart.cartItems.map((item) => {
+    // Copy item but remove prescription file object if exists
+    const cleanItem = { ...item };
+    if (cleanItem.prescription && typeof cleanItem.prescription !== "string") {
+      // If prescription is a File object or anything else, replace with just name or null
+      cleanItem.prescription =
+        cleanItem.prescription.name || null;
+    }
+    return cleanItem;
+  });
+
   const placeOrderHandler = async () => {
     try {
       dispatch({ type: "CREATE_REQUEST" });
       const { data } = await Axios.post(
         "/api/orders",
         {
-          orderItems: cart.cartItems,
+          orderItems: cleanOrderItems,
           shippingAddress: cart.shippingAddress,
           paymentMethod: cart.paymentMethod,
           itemsPrice: cart.itemsPrice,
@@ -81,7 +93,7 @@ export default function PlaceOrderScreen() {
       localStorage.removeItem("cartItems");
 
       setCreatedOrder(data.order);
-      setShowModal(true);  // <-- show modal on success
+      setShowModal(true); // show modal on success
       toast.success("Order placed successfully!");
     } catch (err) {
       dispatch({ type: "CREATE_FAIL" });
