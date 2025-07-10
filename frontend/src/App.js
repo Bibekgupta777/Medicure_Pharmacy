@@ -41,7 +41,15 @@ import { faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
 import Aboutus from './screens/Aboutus';
 import Feedback from './screens/Feedback';
 import MessageListScreen from './screens/AdminMessagesScreen';
-import BandProductPrescriptionScreen from './screens/BandProductPrescriptionScreen'; // <-- import new screen
+import BandProductPrescriptionScreen from './screens/BandProductPrescriptionScreen'; // NEW SCREEN
+
+// New professional pages imports
+import Careers from './screens/Careers';
+import Terms from './screens/Terms';
+import Privacy from './screens/Privacy';
+import FAQ from './screens/FAQ';
+import Returns from './screens/Returns';
+import ShippingInfo from './screens/ShippingInfo';
 
 // stripe
 import { Elements } from '@stripe/react-stripe-js';
@@ -51,7 +59,7 @@ const stripePromise = loadStripe('pk_test_51R3qvbJ8hHU1KUt5dEQTr5HLlPrd0wKpnDujH
 
 function App() {
   const { state, dispatch: ctxDispatch } = useContext(Store);
-  const { fullBox, cart, userInfo } = state;
+  const { cart, userInfo } = state;
 
   const signoutHandler = () => {
     ctxDispatch({ type: 'USER_SIGNOUT' });
@@ -290,7 +298,14 @@ function App() {
               <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/aboutus" element={<Aboutus />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
+
+              {/* Added new pages */}
+              <Route path="/careers" element={<Careers />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/returns" element={<Returns />} />
+              <Route path="/shippinginfo" element={<ShippingInfo />} />
 
               <Route
                 path="/payment/stripe"
