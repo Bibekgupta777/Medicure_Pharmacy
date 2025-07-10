@@ -5,10 +5,16 @@ import { isAuth, isAdmin } from '../utils.js';
 
 const productRouter = express.Router();
 
-productRouter.get('/', async (req, res) => {
-  const products = await Product.find();
-  res.send(products);
-});
+// ✅ Updated route with category filtering
+productRouter.get(
+  '/',
+  expressAsyncHandler(async (req, res) => {
+    const category = req.query.category || '';
+    const filter = category ? { category } : {};
+    const products = await Product.find(filter);
+    res.send(products);
+  })
+);
 
 productRouter.post(
   '/',
@@ -172,7 +178,6 @@ productRouter.get(
   })
 );
 
-
 productRouter.get(
   '/categories',
   expressAsyncHandler(async (req, res) => {
@@ -189,6 +194,7 @@ productRouter.get('/slug/:slug', async (req, res) => {
     res.status(404).send({ message: 'Product Not Found' });
   }
 });
+
 productRouter.get('/:id', async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (product) {
