@@ -1,74 +1,95 @@
-import React, { useEffect, useReducer, useContext } from 'react';
-import axios from 'axios';
-import { Store } from '../Store';
-import LoadingBox from '../components/LoadingBox';
-import MessageBox from '../components/MessageBox';
-
-const reducer = (state, action) => {
-  switch (action.type) {
-    case 'FETCH_REQUEST':
-      return { ...state, loading: true };
-    case 'FETCH_SUCCESS':
-      return { ...state, loading: false, prescriptions: action.payload };
-    case 'FETCH_FAIL':
-      return { ...state, loading: false, error: action.payload };
-    default:
-      return state;
-  }
-};
+import React, { useEffect, useState, useContext } from "react";
+import { Helmet } from "react-helmet-async";
+import axios from "axios";
+import { Store } from "../Store";
+import { toast } from "react-toastify";
+import Table from "react-bootstrap/Table";
+import Button from "react-bootstrap/Button";
+import { Link } from "react-router-dom";
 
 export default function BandProductPrescriptionScreen() {
-  const [{ loading, error, prescriptions }, dispatch] = useReducer(reducer, {
-    loading: true,
-    error: '',
-    prescriptions: [],
-  });
-
   const { state } = useContext(Store);
   const { userInfo } = state;
 
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   useEffect(() => {
     const fetchPrescriptions = async () => {
-      dispatch({ type: 'FETCH_REQUEST' });
+      setLoading(true);
       try {
-        const { data } = await axios.get('/api/prescriptions', {
-          headers: { Authorization: `Bearer ${userInfo.token}` }, // <-- important
+        // Replace with your actual admin API endpoint that returns band product prescriptions
+        const { data } = await axios.get("/api/admin/band-prescriptions", {
+          headers: { Authorization: `Bearer ${userInfo.token}` },
         });
-        dispatch({ type: 'FETCH_SUCCESS', payload: data });
+        setPrescriptions(data);
+        setLoading(false);
       } catch (err) {
-        dispatch({ type: 'FETCH_FAIL', payload: err.response && err.response.data.message ? err.response.data.message : err.message });
+        setError(err.response?.data?.message || err.message);
+        setLoading(false);
+        toast.error(`Error loading prescriptions: ${err.response?.data?.message || err.message}`);
       }
     };
-    if (userInfo && userInfo.token) {
-      fetchPrescriptions();
-    }
-  }, [userInfo]);
-
-  if (!userInfo) {
-    return <MessageBox variant="danger">You must be logged in to view this page.</MessageBox>;
-  }
+    fetchPrescriptions();
+  }, [userInfo.token]);
 
   return (
-    <div className="container small-container">
+    <div className="container mt-3 mb-5">
+      <Helmet>
+        <title>Band Product Prescriptions</title>
+      </Helmet>
       <h1>Band Product Prescriptions</h1>
+
       {loading ? (
-        <LoadingBox />
+        <p>Loading prescriptions...</p>
       ) : error ? (
-        <MessageBox variant="danger">{error}</MessageBox>
+        <p className="text-danger">{error}</p>
       ) : prescriptions.length === 0 ? (
-        <MessageBox>No prescriptions found.</MessageBox>
+        <p>No prescriptions uploaded yet.</p>
       ) : (
-        <ul>
-          {prescriptions.map((p) => (
-            <li key={p._id}>
-              <p><strong>Order ID:</strong> {p.orderId}</p>
-              <p><strong>User:</strong> {p.userName}</p>
-              <p><strong>Product:</strong> {p.productName}</p>
-              <p><strong>Prescription:</strong> <a href={p.prescriptionUrl} target="_blank" rel="noreferrer">View</a></p>
-              <hr />
-            </li>
-          ))}
-        </ul>
+        <Table striped bordered hover responsive className="table-sm">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>User</th>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Prescription</th>
+              <th>Order Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {prescriptions.map((presc) => (
+              <tr key={presc._id}>
+                <td>
+                  <Link to={`/order/${presc.orderId}`}>
+                    {presc.orderId.substring(0, 8)}...
+                  </Link>
+                </td>
+                <td>{presc.userName}</td>
+                <td>{presc.productName}</td>
+                <td>{presc.quantity}</td>
+                <td>
+                  {presc.prescriptionUrl ? (
+                    <a
+                      href={presc.prescriptionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View/Download
+                    </a>
+                  ) : (
+                    "No file"
+                  )}
+                </td>
+                <td>{new Date(presc.createdAt).toLocaleDateString()}</td>
+                <td>{presc.status || "Pending"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );
