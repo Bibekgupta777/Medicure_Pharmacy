@@ -49,7 +49,10 @@ const orderSchema = new mongoose.Schema(
     deliveredAt: { type: Date },
     isCancelled: { type: Boolean, default: false },
 
-    // ✅ NEW delivery status field
+    // NEW prescription field
+    prescription: { type: String },
+
+    // NEW delivery status field
     deliveryStatus: {
       type: String,
       enum: ['pending', 'out for delivery', 'delivered', 'cancelled'],
