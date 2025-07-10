@@ -9,7 +9,7 @@ import userRouter from "./routes/userRoutes.js";
 import orderRouter from "./routes/orderRoutes.js";
 import uploadRouter from "./routes/uploadRoutes.js";
 import paymentRouter from "./routes/paymentRoutes.js";
-import messageRoutes from "./routes/messageRoutes.js";  // make sure filename matches exactly
+import messageRoutes from "./routes/messageRoutes.js";
 
 dotenv.config();
 
@@ -33,10 +33,12 @@ app.use("/api/users", userRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/api/messages", messageRoutes);
-  // your contact message API
+
+// Serve uploaded files statically so they can be accessed
+const __dirname = path.resolve();
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // Serve frontend static files
-const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, "/frontend/build")));
 
 app.get("*", (req, res) => {
