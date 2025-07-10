@@ -1,5 +1,6 @@
 import React from "react";
 import { FaFacebook, FaInstagram, FaYoutube } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -39,10 +40,10 @@ const Footer = () => {
           <div style={{ flex: "1 1 200px", marginBottom: "20px" }}>
             <h3 style={headingStyle}>Company</h3>
             <ul style={listStyle}>
-              <li><a href="/about" style={linkStyle}>About Us</a></li>
-              <li><a href="/careers" style={linkStyle}>Careers</a></li>
-              <li><a href="/terms" style={linkStyle}>Terms & Conditions</a></li>
-              <li><a href="/privacy" style={linkStyle}>Privacy Policy</a></li>
+              <li><Link to="/aboutus" style={linkStyle}>About Us</Link></li>
+              <li><Link to="/careers" style={linkStyle}>Careers</Link></li>
+              <li><Link to="/terms" style={linkStyle}>Terms & Conditions</Link></li>
+              <li><Link to="/privacy" style={linkStyle}>Privacy Policy</Link></li>
             </ul>
           </div>
 
@@ -50,10 +51,10 @@ const Footer = () => {
           <div style={{ flex: "1 1 200px", marginBottom: "20px" }}>
             <h3 style={headingStyle}>Customer Support</h3>
             <ul style={listStyle}>
-              <li><a href="/contact" style={linkStyle}>Contact Us</a></li>
-              <li><a href="/faq" style={linkStyle}>FAQ</a></li>
-              <li><a href="/returns" style={linkStyle}>Return Policy</a></li>
-              <li><a href="/shipping" style={linkStyle}>Shipping Info</a></li>
+              <li><Link to="/feedback" style={linkStyle}>Contact Us</Link></li>
+              <li><Link to="/faq" style={linkStyle}>FAQ</Link></li>
+              <li><Link to="/returns" style={linkStyle}>Return Policy</Link></li>
+              <li><Link to="/shippinginfo" style={linkStyle}>Shipping Info</Link></li>
             </ul>
           </div>
 
