@@ -9,6 +9,7 @@ import Footer from "../components/Footer";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
+import Form from "react-bootstrap/Form";
 import { toast } from "react-toastify";
 import { getError } from "../utils";
 import { Store } from "../Store";
@@ -46,41 +47,78 @@ export default function PlaceOrderScreen() {
 
   const [createdOrder, setCreatedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
-  // Calculate prices
-  const round2 = (num) => Math.round(num * 100 + Number.EPSILON) / 100;
-  cart.itemsPrice = round2(
-    cart.cartItems.reduce((a, c) => a + c.quantity * c.price, 0)
+  
+  // Track selected items - initialize all as selected
+  const [selectedItems, setSelectedItems] = useState(
+    cart.cartItems.map(item => item._id)
   );
-  cart.shippingPrice = cart.itemsPrice > 100 ? round2(0) : round2(10);
-  cart.discountPrice = round2(0.1 * cart.itemsPrice);
-  cart.totalPrice = cart.itemsPrice + cart.shippingPrice - cart.discountPrice;
 
-  // Clean orderItems before sending (remove any File objects)
-  const cleanOrderItems = cart.cartItems.map((item) => {
-    // Copy item but remove prescription file object if exists
+  // Update selected items when cart changes
+  useEffect(() => {
+    setSelectedItems(cart.cartItems.map(item => item._id));
+  }, [cart.cartItems]);
+
+  // Handle item selection
+  const handleItemSelect = (itemId, isSelected) => {
+    if (isSelected) {
+      setSelectedItems(prev => [...prev, itemId]);
+    } else {
+      setSelectedItems(prev => prev.filter(id => id !== itemId));
+    }
+  };
+
+  // Handle select all
+  const handleSelectAll = (isSelected) => {
+    if (isSelected) {
+      setSelectedItems(cart.cartItems.map(item => item._id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  // Get only selected cart items
+  const getSelectedCartItems = () => {
+    return cart.cartItems.filter(item => selectedItems.includes(item._id));
+  };
+
+  const selectedCartItems = getSelectedCartItems();
+
+  // Calculate prices ONLY for selected items
+  const round2 = (num) => Math.round(num * 100 + Number.EPSILON) / 100;
+  const itemsPrice = round2(
+    selectedCartItems.reduce((a, c) => a + c.quantity * c.price, 0)
+  );
+  const shippingPrice = itemsPrice > 100 ? round2(0) : round2(10);
+  const discountPrice = round2(0.1 * itemsPrice);
+  const totalPrice = itemsPrice + shippingPrice - discountPrice;
+
+  // Clean orderItems before sending (remove any File objects) - ONLY selected items
+  const cleanOrderItems = selectedCartItems.map((item) => {
     const cleanItem = { ...item };
     if (cleanItem.prescription && typeof cleanItem.prescription !== "string") {
-      // If prescription is a File object or anything else, replace with just name or null
-      cleanItem.prescription =
-        cleanItem.prescription.name || null;
+      cleanItem.prescription = cleanItem.prescription.name || null;
     }
     return cleanItem;
   });
 
   const placeOrderHandler = async () => {
+    if (selectedCartItems.length === 0) {
+      toast.error("Please select at least one item to place order");
+      return;
+    }
+
     try {
       dispatch({ type: "CREATE_REQUEST" });
       const { data } = await Axios.post(
         "/api/orders",
         {
-          orderItems: cleanOrderItems,
+          orderItems: cleanOrderItems, // Only selected items
           shippingAddress: cart.shippingAddress,
           paymentMethod: cart.paymentMethod,
-          itemsPrice: cart.itemsPrice,
-          shippingPrice: cart.shippingPrice,
-          discountPrice: cart.discountPrice,
-          totalPrice: cart.totalPrice,
+          itemsPrice: itemsPrice, // Price of selected items only
+          shippingPrice: shippingPrice,
+          discountPrice: discountPrice,
+          totalPrice: totalPrice,
         },
         {
           headers: {
@@ -88,12 +126,27 @@ export default function PlaceOrderScreen() {
           },
         }
       );
-      ctxDispatch({ type: "CART_CLEAR" });
-      dispatch({ type: "CREATE_SUCCESS" });
-      localStorage.removeItem("cartItems");
 
+      // Remove ONLY selected items from cart
+      const remainingItems = cart.cartItems.filter(item => !selectedItems.includes(item._id));
+      
+      // Update cart and localStorage with remaining items
+      ctxDispatch({ type: "CART_CLEAR" });
+      if (remainingItems.length > 0) {
+        remainingItems.forEach(item => {
+          ctxDispatch({ 
+            type: "CART_ADD_ITEM", 
+            payload: item 
+          });
+        });
+        localStorage.setItem("cartItems", JSON.stringify(remainingItems));
+      } else {
+        localStorage.removeItem("cartItems");
+      }
+
+      dispatch({ type: "CREATE_SUCCESS" });
       setCreatedOrder(data.order);
-      setShowModal(true); // show modal on success
+      setShowModal(true);
       toast.success("Order placed successfully!");
     } catch (err) {
       dispatch({ type: "CREATE_FAIL" });
@@ -103,7 +156,7 @@ export default function PlaceOrderScreen() {
 
   const handleClose = () => {
     setShowModal(false);
-    navigate("/"); // navigate to home on modal close
+    navigate("/");
   };
 
   useEffect(() => {
@@ -111,6 +164,9 @@ export default function PlaceOrderScreen() {
       navigate("/payment");
     }
   }, [cart, navigate]);
+
+  const allSelected = selectedItems.length === cart.cartItems.length;
+  const noneSelected = selectedItems.length === 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -150,8 +206,75 @@ export default function PlaceOrderScreen() {
 
         <CheckoutSteps step1 step2 step3 step4></CheckoutSteps>
 
-        {/* Order Summary */}
+        {/* Items Selection and Order Summary */}
         <Row className="justify-content-center mb-5">
+          {/* Cart Items Selection */}
+          <Col md={6}>
+            <Card
+              style={{
+                boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+                borderRadius: "15px",
+                marginBottom: "20px",
+              }}
+            >
+              <Card.Header
+                style={{
+                  background: "#0072ff",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: "20px",
+                  textAlign: "center",
+                }}
+              >
+                Select Items ({selectedItems.length} of {cart.cartItems.length})
+              </Card.Header>
+              <Card.Body>
+                <div style={{ marginBottom: "15px" }}>
+                  <Form.Check
+                    type="checkbox"
+                    label="Select All Items"
+                    checked={allSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    style={{ fontWeight: "bold" }}
+                  />
+                </div>
+                <ListGroup variant="flush">
+                  {cart.cartItems.map((item) => (
+                    <ListGroup.Item key={item._id}>
+                      <Row className="align-items-center">
+                        <Col xs={1}>
+                          <Form.Check
+                            type="checkbox"
+                            checked={selectedItems.includes(item._id)}
+                            onChange={(e) => handleItemSelect(item._id, e.target.checked)}
+                          />
+                        </Col>
+                        <Col xs={2}>
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            style={{ width: "50px", height: "50px", objectFit: "cover" }}
+                          />
+                        </Col>
+                        <Col>
+                          <div>
+                            <strong>{item.name}</strong>
+                            <br />
+                            <span>Qty: {item.quantity} × ₹{item.price}</span>
+                          </div>
+                        </Col>
+                        <Col xs={2} className="text-end">
+                          <strong>₹{(item.quantity * item.price).toFixed(2)}</strong>
+                        </Col>
+                      </Row>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </Card.Body>
+            </Card>
+          </Col>
+
+          {/* Order Summary */}
           <Col md={6}>
             <Card
               style={{
@@ -174,20 +297,20 @@ export default function PlaceOrderScreen() {
                 <ListGroup variant="flush">
                   <ListGroup.Item>
                     <Row>
-                      <Col>Items</Col>
-                      <Col>₹{cart.itemsPrice.toFixed(2)}</Col>
+                      <Col>Items ({selectedCartItems.length})</Col>
+                      <Col>₹{itemsPrice.toFixed(2)}</Col>
                     </Row>
                   </ListGroup.Item>
                   <ListGroup.Item>
                     <Row>
                       <Col>Delivery Charges</Col>
-                      <Col>₹{cart.shippingPrice.toFixed(2)}</Col>
+                      <Col>₹{shippingPrice.toFixed(2)}</Col>
                     </Row>
                   </ListGroup.Item>
                   <ListGroup.Item>
                     <Row>
                       <Col>Discount (10%)</Col>
-                      <Col>-₹{cart.discountPrice.toFixed(2)}</Col>
+                      <Col>-₹{discountPrice.toFixed(2)}</Col>
                     </Row>
                   </ListGroup.Item>
                   <ListGroup.Item>
@@ -196,7 +319,7 @@ export default function PlaceOrderScreen() {
                         <strong>Total</strong>
                       </Col>
                       <Col>
-                        <strong>₹{cart.totalPrice.toFixed(2)}</strong>
+                        <strong>₹{totalPrice.toFixed(2)}</strong>
                       </Col>
                     </Row>
                   </ListGroup.Item>
@@ -206,10 +329,10 @@ export default function PlaceOrderScreen() {
                         variant="success"
                         type="button"
                         onClick={placeOrderHandler}
-                        disabled={cart.cartItems.length === 0 || loading}
+                        disabled={noneSelected || loading}
                         style={{ padding: "14px", fontSize: "18px" }}
                       >
-                        {loading ? "Placing..." : "Place Order Now"}
+                        {loading ? "Placing..." : `Place Order (${selectedCartItems.length} items)`}
                       </Button>
                     </div>
                     {loading && <LoadingBox />}
@@ -295,6 +418,7 @@ export default function PlaceOrderScreen() {
               <p><strong>Date:</strong> {createdOrder.createdAt.substring(0, 10)}</p>
               <p><strong>Total Price:</strong> ₹{createdOrder.totalPrice.toFixed(2)}</p>
               <p><strong>Payment Method:</strong> {createdOrder.paymentMethod}</p>
+              <p><strong>Items Ordered:</strong> {createdOrder.orderItems.length}</p>
 
               <p>
                 <strong>Shipping Address:</strong><br />
@@ -315,7 +439,7 @@ export default function PlaceOrderScreen() {
   );
 }
 
-// Helper styles & hover functions (unchanged)
+// Helper styles & hover functions
 const featureCardImageStyle = (imgPath) => ({
   backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${imgPath}')`,
   backgroundSize: "cover",
