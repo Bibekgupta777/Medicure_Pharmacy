@@ -123,7 +123,7 @@ export default function OrderHistoryScreen() {
                         <div style={itemInfoStyle}>
                           <p style={itemNameStyle}>{item.name}</p>
                           <p style={itemQtyStyle}>Qty: {item.quantity}</p>
-                          <p style={itemPriceStyle}>₹{item.price.toFixed(2)}</p>
+                          <p style={itemPriceStyle}>Rs{item.price.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
@@ -131,7 +131,7 @@ export default function OrderHistoryScreen() {
 
                   <div style={orderSummaryStyle}>
                     <p>
-                      <strong>Total Price: </strong>₹{order.totalPrice.toFixed(2)}
+                      <strong>Total Price: </strong>Rs{order.totalPrice.toFixed(2)}
                     </p>
                     <p>
                       <strong>Payment Status: </strong>{' '}

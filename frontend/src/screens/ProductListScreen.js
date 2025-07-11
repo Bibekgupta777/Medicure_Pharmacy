@@ -240,7 +240,7 @@ const ProductListScreen = () => {
                   <td style={{ padding: '12px 15px', fontSize: '0.95rem', fontWeight: '600', color: '#007bff' }}>
                     {product.name}
                   </td>
-                  <td style={{ padding: '12px 15px' }}>₹{product.price.toFixed(2)}</td>
+                  <td style={{ padding: '12px 15px' }}>Rs{product.price.toFixed(2)}</td>
                   <td style={{ padding: '12px 15px' }}>{product.category}</td>
                   <td style={{ padding: '12px 15px' }}>{product.brand}</td>
                   <td style={{ padding: '12px 15px' }}>

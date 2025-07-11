@@ -47,59 +47,157 @@ export default function PlaceOrderScreen() {
 
   const [createdOrder, setCreatedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  
-  // Track selected items - initialize all as selected
+
+  // Selected items IDs
   const [selectedItems, setSelectedItems] = useState(
-    cart.cartItems.map(item => item._id)
+    cart.cartItems.map((item) => item._id)
   );
 
-  // Update selected items when cart changes
+  // Prescription files keyed by productId
+  const [prescriptions, setPrescriptions] = useState({});
+
+  // Upload loading state to avoid duplicate upload clicks
+  const [uploadingPrescription, setUploadingPrescription] = useState(false);
+
   useEffect(() => {
-    setSelectedItems(cart.cartItems.map(item => item._id));
+    setSelectedItems(cart.cartItems.map((item) => item._id));
   }, [cart.cartItems]);
 
-  // Handle item selection
   const handleItemSelect = (itemId, isSelected) => {
     if (isSelected) {
-      setSelectedItems(prev => [...prev, itemId]);
+      setSelectedItems((prev) => [...prev, itemId]);
     } else {
-      setSelectedItems(prev => prev.filter(id => id !== itemId));
+      setSelectedItems((prev) => prev.filter((id) => id !== itemId));
+      setPrescriptions((prev) => {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      });
     }
   };
 
-  // Handle select all
   const handleSelectAll = (isSelected) => {
     if (isSelected) {
-      setSelectedItems(cart.cartItems.map(item => item._id));
+      setSelectedItems(cart.cartItems.map((item) => item._id));
     } else {
       setSelectedItems([]);
+      setPrescriptions({});
     }
   };
 
-  // Get only selected cart items
-  const getSelectedCartItems = () => {
-    return cart.cartItems.filter(item => selectedItems.includes(item._id));
+  const handlePrescriptionUpload = (e, itemId) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPrescriptions((prev) => ({
+        ...prev,
+        [itemId]: file,
+      }));
+      toast.success(`Prescription uploaded for item.`);
+    }
   };
 
-  const selectedCartItems = getSelectedCartItems();
+  const selectedCartItems = cart.cartItems.filter((item) =>
+    selectedItems.includes(item._id)
+  );
 
-  // Calculate prices ONLY for selected items
   const round2 = (num) => Math.round(num * 100 + Number.EPSILON) / 100;
+
   const itemsPrice = round2(
     selectedCartItems.reduce((a, c) => a + c.quantity * c.price, 0)
   );
-  const shippingPrice = itemsPrice > 100 ? round2(0) : round2(10);
+  const shippingPrice = itemsPrice > 100 ? 0 : 10;
   const discountPrice = round2(0.1 * itemsPrice);
-  const totalPrice = itemsPrice + shippingPrice - discountPrice;
+  const totalPrice = round2(itemsPrice + shippingPrice - discountPrice);
 
-  // Clean orderItems before sending (remove any File objects) - ONLY selected items
-  const cleanOrderItems = selectedCartItems.map((item) => {
-    const cleanItem = { ...item };
-    if (cleanItem.prescription && typeof cleanItem.prescription !== "string") {
-      cleanItem.prescription = cleanItem.prescription.name || null;
+  const validatePrescriptions = () => {
+    for (const item of selectedCartItems) {
+      if (item.category === "Band Product") {
+        if (!prescriptions[item._id]) {
+          toast.error(
+            `Please upload prescription for "${item.name}" before placing order.`
+          );
+          return false;
+        }
+      }
     }
-    return cleanItem;
-  });
+    return true;
+  };
+
+  // New helper: get upload URL from environment or default relative path
+  const getUploadURL = () => {
+    if (
+      window &&
+      window.location &&
+      window.location.origin &&
+      process.env.REACT_APP_UPLOAD_URL
+    ) {
+      // Use env var if defined (better for production)
+      return process.env.REACT_APP_UPLOAD_URL;
+    }
+    // Default relative API endpoint
+    return "/api/uploads/prescription";
+  };
+
+  // Upload prescriptions files and get URLs from backend with retry & error logging
+  const uploadPrescriptionsAndPlaceOrder = async () => {
+    const uploadedPrescriptionURLs = {};
+
+    for (const [productId, file] of Object.entries(prescriptions)) {
+      if (file) {
+        setUploadingPrescription(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const url = getUploadURL();
+
+          // First attempt
+          let response = await Axios.post(url, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              authorization: `Bearer ${userInfo.token}`,
+            },
+          });
+
+          // If upload failed, try one retry automatically
+          if (!response.data || !response.data.url) {
+            console.warn(
+              `Upload response missing url for product ${productId}, retrying once...`
+            );
+            response = await Axios.post(url, formData, {
+              headers: {
+                "Content-Type": "multipart/form-data",
+                authorization: `Bearer ${userInfo.token}`,
+              },
+            });
+          }
+
+          if (!response.data || !response.data.url) {
+            toast.error(`Upload failed for product ${productId}: no URL returned`);
+            setUploadingPrescription(false);
+            return null;
+          }
+
+          uploadedPrescriptionURLs[productId] = response.data.url;
+          setUploadingPrescription(false);
+        } catch (error) {
+          console.error(
+            `Upload error for product ${productId}:`,
+            error.response ? error.response.data : error.message
+          );
+          toast.error(
+            `Failed to upload prescription for product ${productId}: ${
+              error.response?.data?.message || error.message
+            }`
+          );
+          setUploadingPrescription(false);
+          return null;
+        }
+      }
+    }
+    setUploadingPrescription(false);
+    return uploadedPrescriptionURLs;
+  };
 
   const placeOrderHandler = async () => {
     if (selectedCartItems.length === 0) {
@@ -107,18 +205,46 @@ export default function PlaceOrderScreen() {
       return;
     }
 
+    if (!validatePrescriptions()) {
+      return;
+    }
+
+    if (uploadingPrescription) {
+      toast.info("Please wait until prescription uploads finish.");
+      return;
+    }
+
+    dispatch({ type: "CREATE_REQUEST" });
+
+    const uploadedPrescriptionURLs = await uploadPrescriptionsAndPlaceOrder();
+
+    if (uploadedPrescriptionURLs === null) {
+      dispatch({ type: "CREATE_FAIL" });
+      return;
+    }
+
+    const orderItemsForAPI = selectedCartItems.map((item) => {
+      const orderItem = { ...item };
+      if (item.category === "Band Product") {
+        orderItem.prescription = uploadedPrescriptionURLs[item._id] || null;
+      } else {
+        orderItem.prescription = null;
+      }
+      return orderItem;
+    });
+    
+
     try {
-      dispatch({ type: "CREATE_REQUEST" });
       const { data } = await Axios.post(
         "/api/orders",
         {
-          orderItems: cleanOrderItems, // Only selected items
+          orderItems: orderItemsForAPI,
           shippingAddress: cart.shippingAddress,
           paymentMethod: cart.paymentMethod,
-          itemsPrice: itemsPrice, // Price of selected items only
-          shippingPrice: shippingPrice,
-          discountPrice: discountPrice,
-          totalPrice: totalPrice,
+          itemsPrice,
+          shippingPrice,
+          discountPrice,
+          totalPrice,
         },
         {
           headers: {
@@ -127,17 +253,14 @@ export default function PlaceOrderScreen() {
         }
       );
 
-      // Remove ONLY selected items from cart
-      const remainingItems = cart.cartItems.filter(item => !selectedItems.includes(item._id));
-      
-      // Update cart and localStorage with remaining items
+      const remainingItems = cart.cartItems.filter(
+        (item) => !selectedItems.includes(item._id)
+      );
+
       ctxDispatch({ type: "CART_CLEAR" });
       if (remainingItems.length > 0) {
-        remainingItems.forEach(item => {
-          ctxDispatch({ 
-            type: "CART_ADD_ITEM", 
-            payload: item 
-          });
+        remainingItems.forEach((item) => {
+          ctxDispatch({ type: "CART_ADD_ITEM", payload: item });
         });
         localStorage.setItem("cartItems", JSON.stringify(remainingItems));
       } else {
@@ -246,7 +369,9 @@ export default function PlaceOrderScreen() {
                           <Form.Check
                             type="checkbox"
                             checked={selectedItems.includes(item._id)}
-                            onChange={(e) => handleItemSelect(item._id, e.target.checked)}
+                            onChange={(e) =>
+                              handleItemSelect(item._id, e.target.checked)
+                            }
                           />
                         </Col>
                         <Col xs={2}>
@@ -260,11 +385,37 @@ export default function PlaceOrderScreen() {
                           <div>
                             <strong>{item.name}</strong>
                             <br />
-                            <span>Qty: {item.quantity} × ₹{item.price}</span>
+                            <span>
+                              Qty: {item.quantity} × Rs{item.price}
+                            </span>
                           </div>
+                          {item.category === "Band Product" &&
+                            selectedItems.includes(item._id) && (
+                              <Form.Group
+                                controlId={`prescription-${item._id}`}
+                                className="mt-2"
+                              >
+                                <Form.Label style={{ fontSize: "0.85rem" }}>
+                                  Upload Prescription (Required)
+                                </Form.Label>
+                                <Form.Control
+                                  type="file"
+                                  accept=".jpg,.jpeg,.png,.pdf"
+                                  onChange={(e) =>
+                                    handlePrescriptionUpload(e, item._id)
+                                  }
+                                  disabled={uploadingPrescription}
+                                />
+                                {prescriptions[item._id] && (
+                                  <small className="text-success">
+                                    Uploaded: {prescriptions[item._id].name}
+                                  </small>
+                                )}
+                              </Form.Group>
+                            )}
                         </Col>
                         <Col xs={2} className="text-end">
-                          <strong>₹{(item.quantity * item.price).toFixed(2)}</strong>
+                          <strong>Rs{(item.quantity * item.price).toFixed(2)}</strong>
                         </Col>
                       </Row>
                     </ListGroup.Item>
@@ -298,19 +449,19 @@ export default function PlaceOrderScreen() {
                   <ListGroup.Item>
                     <Row>
                       <Col>Items ({selectedCartItems.length})</Col>
-                      <Col>₹{itemsPrice.toFixed(2)}</Col>
+                      <Col>Rs{itemsPrice.toFixed(2)}</Col>
                     </Row>
                   </ListGroup.Item>
                   <ListGroup.Item>
                     <Row>
                       <Col>Delivery Charges</Col>
-                      <Col>₹{shippingPrice.toFixed(2)}</Col>
+                      <Col>Rs{shippingPrice.toFixed(2)}</Col>
                     </Row>
                   </ListGroup.Item>
                   <ListGroup.Item>
                     <Row>
                       <Col>Discount (10%)</Col>
-                      <Col>-₹{discountPrice.toFixed(2)}</Col>
+                      <Col>-Rs{discountPrice.toFixed(2)}</Col>
                     </Row>
                   </ListGroup.Item>
                   <ListGroup.Item>
@@ -319,7 +470,7 @@ export default function PlaceOrderScreen() {
                         <strong>Total</strong>
                       </Col>
                       <Col>
-                        <strong>₹{totalPrice.toFixed(2)}</strong>
+                        <strong>Rs{totalPrice.toFixed(2)}</strong>
                       </Col>
                     </Row>
                   </ListGroup.Item>
@@ -329,13 +480,17 @@ export default function PlaceOrderScreen() {
                         variant="success"
                         type="button"
                         onClick={placeOrderHandler}
-                        disabled={noneSelected || loading}
+                        disabled={noneSelected || loading || uploadingPrescription}
                         style={{ padding: "14px", fontSize: "18px" }}
                       >
-                        {loading ? "Placing..." : `Place Order (${selectedCartItems.length} items)`}
+                        {loading
+                          ? "Placing..."
+                          : uploadingPrescription
+                          ? "Uploading prescriptions..."
+                          : `Place Order (${selectedCartItems.length} items)`}
                       </Button>
                     </div>
-                    {loading && <LoadingBox />}
+                    {(loading || uploadingPrescription) && <LoadingBox />}
                   </ListGroup.Item>
                 </ListGroup>
               </Card.Body>
@@ -352,7 +507,10 @@ export default function PlaceOrderScreen() {
             borderRadius: "20px",
           }}
         >
-          <h2 className="text-center mb-5" style={{ fontWeight: "bold", fontSize: "2rem" }}>
+          <h2
+            className="text-center mb-5"
+            style={{ fontWeight: "bold", fontSize: "2rem" }}
+          >
             Why Shop With Us?
           </h2>
           <Row className="text-center g-4">
@@ -414,16 +572,31 @@ export default function PlaceOrderScreen() {
         <Modal.Body>
           {createdOrder && (
             <>
-              <p><strong>Order ID:</strong> {createdOrder._id}</p>
-              <p><strong>Date:</strong> {createdOrder.createdAt.substring(0, 10)}</p>
-              <p><strong>Total Price:</strong> ₹{createdOrder.totalPrice.toFixed(2)}</p>
-              <p><strong>Payment Method:</strong> {createdOrder.paymentMethod}</p>
-              <p><strong>Items Ordered:</strong> {createdOrder.orderItems.length}</p>
+              <p>
+                <strong>Order ID:</strong> {createdOrder._id}
+              </p>
+              <p>
+                <strong>Date:</strong> {createdOrder.createdAt.substring(0, 10)}
+              </p>
+              <p>
+                <strong>Total Price:</strong> Rs{createdOrder.totalPrice.toFixed(2)}
+              </p>
+              <p>
+                <strong>Payment Method:</strong> {createdOrder.paymentMethod}
+              </p>
+              <p>
+                <strong>Items Ordered:</strong> {createdOrder.orderItems.length}
+              </p>
 
               <p>
-                <strong>Shipping Address:</strong><br />
-                {createdOrder.shippingAddress.fullName}, {createdOrder.shippingAddress.address},<br />
-                {createdOrder.shippingAddress.city}, {createdOrder.shippingAddress.postalCode},<br />
+                <strong>Shipping Address:</strong>
+                <br />
+                {createdOrder.shippingAddress.fullName},{" "}
+                {createdOrder.shippingAddress.address}
+                ,<br />
+                {createdOrder.shippingAddress.city},{" "}
+                {createdOrder.shippingAddress.postalCode}
+                ,<br />
                 {createdOrder.shippingAddress.country}
               </p>
             </>
@@ -441,24 +614,24 @@ export default function PlaceOrderScreen() {
 
 // Helper styles & hover functions
 const featureCardImageStyle = (imgPath) => ({
-  backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${imgPath}')`,
+  backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.3)), url(${imgPath})`,
   backgroundSize: "cover",
   backgroundPosition: "center",
-  color: "#fff",
-  padding: "30px 20px",
+  padding: "20px",
   borderRadius: "15px",
-  transition: "transform 0.3s ease, box-shadow 0.3s ease",
+  color: "white",
   cursor: "pointer",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-  textAlign: "center",
+  transition: "transform 0.3s ease, box-shadow 0.3s ease",
+  boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+  userSelect: "none",
 });
 
 const handleHoverIn = (e) => {
   e.currentTarget.style.transform = "scale(1.05)";
-  e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
+  e.currentTarget.style.boxShadow = "0 12px 30px rgba(0,0,0,0.5)";
 };
 
 const handleHoverOut = (e) => {
   e.currentTarget.style.transform = "scale(1)";
-  e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)";
+  e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.3)";
 };

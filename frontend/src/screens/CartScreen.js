@@ -13,7 +13,6 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import MessageBox from "../components/MessageBox";
 import Form from "react-bootstrap/Form";
-import { toast } from "react-toastify";
 
 export default function CartScreen() {
   const navigate = useNavigate();
@@ -25,9 +24,6 @@ export default function CartScreen() {
   const [selectedItems, setSelectedItems] = useState(
     cartItems.map((item) => item._id)
   );
-
-  // prescription file mapping by product id
-  const [prescriptions, setPrescriptions] = useState({});
 
   const updateCartHandler = async (item, quantity) => {
     const { data } = await axios.get(`/api/products/${item._id}`);
@@ -44,13 +40,6 @@ export default function CartScreen() {
   const removeItemHandler = (item) => {
     ctxDispatch({ type: "CART_REMOVE_ITEM", payload: item });
     setSelectedItems((prev) => prev.filter((id) => id !== item._id));
-
-    // remove any uploaded prescription
-    setPrescriptions((prev) => {
-      const copy = { ...prev };
-      delete copy[item._id];
-      return copy;
-    });
   };
 
   const handleSelectItem = (itemId) => {
@@ -61,39 +50,14 @@ export default function CartScreen() {
     );
   };
 
-  const handlePrescriptionUpload = (e, itemId) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPrescriptions((prev) => ({
-        ...prev,
-        [itemId]: file,
-      }));
-      toast.success(`Prescription uploaded for item`);
-    }
-  };
-
   const selectedCartItems = cartItems.filter((item) =>
     selectedItems.includes(item._id)
   );
 
   const checkoutHandler = () => {
-    // check if any selected "Band Product" does not have prescription
-    const bandProductMissingPrescription = selectedCartItems.some(
-      (item) =>
-        item.category === "Band Product" && !prescriptions[item._id]
-    );
-
-    if (bandProductMissingPrescription) {
-      toast.error("Please upload prescription for Band Product items before checkout.");
-      return;
-    }
-
     ctxDispatch({
       type: "CART_SET_SELECTED_ITEMS",
-      payload: selectedCartItems.map((item) => ({
-        ...item,
-        prescription: prescriptions[item._id] ? prescriptions[item._id].name : null,
-      })),
+      payload: selectedCartItems,
     });
 
     navigate("/signin?redirect=/shipping");
@@ -192,25 +156,6 @@ export default function CartScreen() {
                           >
                             {item.name}
                           </Link>
-                          {item.category === "Band Product" && (
-                            <div className="mt-2">
-                              <Form.Group controlId={`prescription-${item._id}`}>
-                                <Form.Label style={{ fontSize: "0.9rem" }}>
-                                  Prescription Required
-                                </Form.Label>
-                                <Form.Control
-                                  type="file"
-                                  accept=".jpg,.png,.pdf"
-                                  onChange={(e) => handlePrescriptionUpload(e, item._id)}
-                                />
-                                {prescriptions[item._id] && (
-                                  <small className="text-success">
-                                    Uploaded: {prescriptions[item._id].name}
-                                  </small>
-                                )}
-                              </Form.Group>
-                            </div>
-                          )}
                         </Col>
                         <Col md={2} className="d-flex align-items-center">
                           <Button
@@ -231,7 +176,7 @@ export default function CartScreen() {
                         </Col>
                         <Col md={2}>
                           <strong>
-                            ₹{(item.price * item.quantity).toFixed(2)}
+                            Rs{(item.price * item.quantity).toFixed(2)}
                           </strong>
                         </Col>
                         <Col md={1}>
@@ -255,7 +200,7 @@ export default function CartScreen() {
                   Subtotal ({selectedCartItems.reduce((a, c) => a + c.quantity, 0)} items)
                 </h3>
                 <h4 className="text-center text-success mb-4">
-                  ₹{selectedCartItems
+                  Rs{selectedCartItems
                     .reduce((a, c) => a + c.price * c.quantity, 0)
                     .toFixed(2)}
                 </h4>

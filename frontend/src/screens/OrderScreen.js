@@ -129,7 +129,7 @@ export default function OrderScreen() {
                         <span style={{ fontWeight: "600" }}>{item.quantity}</span>
                       </Col>
                       <Col xs={2} sm={2} style={{ textAlign: "right", fontWeight: "700" }}>
-                        ₹{new Intl.NumberFormat("en-IN").format(item.price)}
+                        Rs{new Intl.NumberFormat("en-IN").format(item.price)}
                       </Col>
                     </Row>
                   </ListGroup.Item>

@@ -328,7 +328,7 @@ export default function OrderListScreen() {
                     <th>ID</th>
                     <th>User</th>
                     <th>Date</th>
-                    <th>Total (₹)</th>
+                    <th>Total (Rs)</th>
                     <th>Payment Status</th>
                     <th>Paid At</th>
                     <th>Payment Method</th>
@@ -512,7 +512,7 @@ export default function OrderListScreen() {
               <h5>Order Items</h5>
               {selectedOrder.orderItems?.map((item, idx) => (
                 <div key={idx}>
-                  {item.name} x {item.quantity} @ ₹{item.price.toFixed(2)}
+                  {item.name} x {item.quantity} @ Rs{item.price.toFixed(2)}
                 </div>
               ))}
               <hr />
@@ -523,7 +523,7 @@ export default function OrderListScreen() {
                   : 'No shipping address'}
               </p>
               <hr />
-              <h5>Total: ₹{selectedOrder.totalPrice.toFixed(2)}</h5>
+              <h5>Total: Rs{selectedOrder.totalPrice.toFixed(2)}</h5>
             </>
           )}
         </Modal.Body>

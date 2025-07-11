@@ -276,7 +276,7 @@ export default function DashboardScreen() {
                     slantedTextAngle: 45,
                   },
                   vAxis: {
-                    title: 'Sales (₹)',
+                    title: 'Sales (Rs)',
                     titleTextStyle: { color: '#333', fontSize: 16, bold: true },
                     textStyle: { color: '#555', fontSize: 13 },
                     gridlines: { color: '#f0f0f0' },
