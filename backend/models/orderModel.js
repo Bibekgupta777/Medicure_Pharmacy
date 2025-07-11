@@ -14,6 +14,7 @@ const orderSchema = new mongoose.Schema(
           ref: 'Product',
           required: true,
         },
+        prescription: { type: String, default: null },  // <--- add this line
       },
     ],
     shippingAddress: {
@@ -49,10 +50,9 @@ const orderSchema = new mongoose.Schema(
     deliveredAt: { type: Date },
     isCancelled: { type: Boolean, default: false },
 
-    // NEW prescription field
-    prescription: { type: String },
+    // Remove this root-level prescription field if unused
+    // prescription: { type: String },
 
-    // NEW delivery status field
     deliveryStatus: {
       type: String,
       enum: ['pending', 'out for delivery', 'delivered', 'cancelled'],
@@ -63,6 +63,7 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
 
 const Order = mongoose.model('Order', orderSchema);
 export default Order;

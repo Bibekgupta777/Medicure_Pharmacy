@@ -1,38 +1,43 @@
 import express from 'express';
 import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
-import streamifier from 'streamifier';
-import { isAdmin, isAuth } from '../utils.js';
-
-const upload = multer();
+import path from 'path';
+import { isAuth } from '../utils.js';
+import { fileURLToPath } from 'url';
 
 const uploadRouter = express.Router();
 
+// __dirname for ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Multer storage: save to /uploads/prescriptions
+const storage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads/prescriptions'));
+  },
+  filename(req, file, cb) {
+    const timestamp = Date.now();
+    const sanitized = file.originalname.replace(/\s+/g, '-');
+    cb(null, `${timestamp}-${sanitized}`);
+  },
+});
+
+const upload = multer({ storage });
+
+// POST /api/uploads/prescription
 uploadRouter.post(
-  '/',
+  '/prescription',
   isAuth,
-  isAdmin,
   upload.single('file'),
-  async (req, res) => {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
-    const streamUpload = (req) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream((error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(error);
-          }
-        });
-        streamifier.createReadStream(req.file.buffer).pipe(stream);
-      });
-    };
-    const result = await streamUpload(req);
-    res.send(result);
+  (req, res) => {
+    if (!req.file) {
+      return res.status(400).send({ message: 'No file uploaded' });
+    }
+
+    // Return the accessible URL to frontend
+    const url = `/uploads/prescriptions/${req.file.filename}`;
+    res.send({ url });
   }
 );
+
 export default uploadRouter;

@@ -37,6 +37,11 @@ orderRouter.post(
       discountPrice: req.body.discountPrice,
       totalPrice: req.body.totalPrice,
       user: req.user._id,
+
+      // NEW: Prescription fields
+      prescription: req.body.prescription || '', // URL from Cloudinary upload
+      isPrescriptionRequired:
+        req.body.isPrescriptionRequired === true || req.body.isPrescriptionRequired === 'true',
     });
 
     const order = await newOrder.save();
@@ -64,7 +69,9 @@ orderRouter.get(
       },
       { $sort: { _id: 1 } },
     ]);
-    const productCategories = await Product.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }]);
+    const productCategories = await Product.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]);
     res.send({ users, orders, dailyOrders, productCategories });
   })
 );
@@ -148,7 +155,7 @@ orderRouter.put(
     if (order) {
       order.isDelivered = true;
       order.deliveredAt = Date.now();
-      order.deliveryStatus = 'delivered'; // ✅ update status as well
+      order.deliveryStatus = 'delivered'; // update status
       await order.save();
       res.send({ message: 'Order Delivered', order });
     } else {
@@ -166,7 +173,7 @@ orderRouter.put(
     if (order) {
       if (req.user.isAdmin || order.user.toString() === req.user._id.toString()) {
         order.isCancelled = true;
-        order.deliveryStatus = 'cancelled'; // ✅ update status as well
+        order.deliveryStatus = 'cancelled'; // update status
         await order.save();
         res.send({ message: 'Order cancelled', order });
       } else {
@@ -178,7 +185,7 @@ orderRouter.put(
   })
 );
 
-// ✅ NEW: admin update delivery status (eg: pending → out for delivery)
+// admin update delivery status
 orderRouter.put(
   '/:id/status',
   isAuth,
