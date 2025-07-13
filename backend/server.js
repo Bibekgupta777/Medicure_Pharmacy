@@ -70,7 +70,7 @@ app.get(
   isAuth,
   isAdmin,
   asyncHandler(async (req, res) => {
-    const orders = await Order.find({ isPrescriptionRequired: true })
+    const orders = await Order.find()
       .populate("user", "name")
       .populate("orderItems.product", "name category");
 
@@ -78,14 +78,19 @@ app.get(
 
     for (const order of orders) {
       for (const item of order.orderItems) {
-        if (item.product && item.product.category === "Band Product") {
+        // Check for "Band Product" and that prescription exists
+        if (
+          item.product &&
+          item.product.category === "Band Product" &&
+          item.prescription // ensure prescription was uploaded
+        ) {
           prescriptions.push({
-            _id: order._id,
+            _id: order._id + item._id, // unique key
             orderId: order._id,
             userName: order.user?.name || "Unknown",
             productName: item.product.name,
             quantity: item.quantity,
-            prescriptionUrl: item.prescription || "",
+            prescriptionUrl: item.prescription,
             createdAt: order.createdAt,
             status: order.isDelivered ? "Delivered" : "Pending",
           });
@@ -96,6 +101,7 @@ app.get(
     res.json(prescriptions);
   })
 );
+
 
 // Serve React frontend
 app.use(express.static(path.join(__dirname, "/frontend/build")));

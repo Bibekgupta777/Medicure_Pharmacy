@@ -74,10 +74,10 @@ export default function BandProductPrescriptionScreen() {
                 <td>
                   {presc.prescriptionUrl ? (
                     <a
-                      href={presc.prescriptionUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+  href={`http://localhost:5000${presc.prescriptionUrl}`} // prepend server URL
+  target="_blank"
+  rel="noopener noreferrer"
+>
                       View/Download
                     </a>
                   ) : (
