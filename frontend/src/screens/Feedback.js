@@ -11,7 +11,8 @@ const ContactUs = () => {
   const [openFAQ, setOpenFAQ] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,7 +57,8 @@ const ContactUs = () => {
 
   return (
     <section style={{ backgroundColor: '#f7fafc' }}>
-      <ToastContainer />
+      {/* Toast Notification */}
+      <ToastContainer position="bottom-center" hideProgressBar={false} />
 
       {/* Banner */}
       <div style={{

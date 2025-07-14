@@ -63,7 +63,7 @@ app.use("/api/users", userRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/api/messages", messageRoutes);
-
+app.use("/api/contact", messageRoutes);
 // Admin route: fetch prescription data
 app.get(
   "/api/admin/band-prescriptions",
