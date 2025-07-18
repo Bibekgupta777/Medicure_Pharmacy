@@ -72,11 +72,10 @@ function HomeScreen() {
   };
 
   const heroImages = [
-    '/images/herobanner.png',
-    '/images/banner1.png',
-    '/images/banner2.png',
-    '/images/banner3.png',
-    '/images/hero5.jpg',
+    '/images/blue.png',
+    '/images/green.png',
+    '/images/whitw.png',
+    
   ];
 
   const bannerData = [

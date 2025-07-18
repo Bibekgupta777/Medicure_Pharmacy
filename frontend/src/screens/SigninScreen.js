@@ -8,6 +8,7 @@ import { Store } from '../Store';
 import { toast } from 'react-toastify';
 import { getError } from '../utils';
 import Axios from 'axios';
+import { Icon } from '@iconify/react';
 
 export default function SigninScreen() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function SigninScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { state, dispatch: ctxDispatch } = useContext(Store);
   const { userInfo } = state;
@@ -54,10 +56,6 @@ export default function SigninScreen() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingTop: 0,
-        paddingBottom: 0,
-        marginTop: 0,
-        marginBottom: 0,
       }}
     >
       <Container
@@ -73,8 +71,6 @@ export default function SigninScreen() {
           border: '1px solid rgba(0, 0, 0, 0.15)',
           maxHeight: 'calc(100vh)',
           overflowY: 'auto',
-          marginTop: 0,
-          marginBottom: 0,
         }}
       >
         <Helmet>
@@ -88,12 +84,12 @@ export default function SigninScreen() {
             fontSize: '2.5rem',
             letterSpacing: '1.5px',
             color: '#000000',
-            textShadow: 'none',
           }}
         >
           Sign In
         </h1>
         <Form onSubmit={submitHandler}>
+          {/* Email Field */}
           <Form.Group controlId="email" className="mb-3">
             <Form.Label style={{ color: '#000' }}>Email</Form.Label>
             <Form.Control
@@ -111,10 +107,11 @@ export default function SigninScreen() {
             />
           </Form.Group>
 
-          <Form.Group controlId="password" className="mb-4">
+          {/* Password Field with Show/Hide */}
+          <Form.Group controlId="password" className="mb-4" style={{ position: 'relative' }}>
             <Form.Label style={{ color: '#000' }}>Password</Form.Label>
             <Form.Control
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -124,8 +121,25 @@ export default function SigninScreen() {
                 borderRadius: '8px',
                 border: '1px solid #ccc',
                 color: '#000',
+                paddingRight: '40px',
               }}
             />
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '40px',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon
+                icon={showPassword ? 'mdi:eye-off' : 'mdi:eye'}
+                width="24"
+                height="24"
+                color="#666"
+              />
+            </span>
           </Form.Group>
 
           <Button
@@ -143,8 +157,12 @@ export default function SigninScreen() {
               transition: 'background-color 0.3s ease',
               marginBottom: '15px',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#218838')}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#28a745')}
+            onMouseOver={(e) =>
+              (e.currentTarget.style.backgroundColor = '#218838')
+            }
+            onMouseOut={(e) =>
+              (e.currentTarget.style.backgroundColor = '#28a745')
+            }
           >
             Sign In
           </Button>
@@ -159,13 +177,19 @@ export default function SigninScreen() {
           }}
         >
           New customer?{' '}
-          <Link to={`/signup?redirect=${redirect}`} style={{ color: '#28a745', fontWeight: '600' }}>
+          <Link
+            to={`/signup?redirect=${redirect}`}
+            style={{ color: '#28a745', fontWeight: '600' }}
+          >
             Create your account
           </Link>
         </div>
 
         <div style={{ textAlign: 'center' }}>
-          <Link to="/forget-password" style={{ color: '#28a745', fontWeight: '600' }}>
+          <Link
+            to="/forget-password"
+            style={{ color: '#28a745', fontWeight: '600' }}
+          >
             Forgot Password? Reset Password
           </Link>
         </div>

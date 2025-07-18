@@ -8,6 +8,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Store } from '../Store';
 import { toast } from 'react-toastify';
 import { getError } from '../utils';
+import { Icon } from '@iconify/react';
 
 export default function SignupScreen() {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { state, dispatch: ctxDispatch } = useContext(Store);
   const { userInfo } = state;
@@ -132,10 +135,11 @@ export default function SignupScreen() {
             />
           </Form.Group>
 
-          <Form.Group controlId="password" className="mb-3">
+          {/* Password Field */}
+          <Form.Group controlId="password" className="mb-3" style={{ position: 'relative' }}>
             <Form.Label>Password</Form.Label>
             <Form.Control
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -145,14 +149,32 @@ export default function SignupScreen() {
                 borderRadius: '8px',
                 border: '1px solid #ccc',
                 color: '#000',
+                paddingRight: '40px',
               }}
             />
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '40px',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon
+                icon={showPassword ? 'mdi:eye-off' : 'mdi:eye'}
+                width="24"
+                height="24"
+                color="#666"
+              />
+            </span>
           </Form.Group>
 
-          <Form.Group controlId="confirmPassword" className="mb-4">
+          {/* Confirm Password Field */}
+          <Form.Group controlId="confirmPassword" className="mb-4" style={{ position: 'relative' }}>
             <Form.Label>Confirm Password</Form.Label>
             <Form.Control
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               placeholder="Confirm password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -162,8 +184,25 @@ export default function SignupScreen() {
                 borderRadius: '8px',
                 border: '1px solid #ccc',
                 color: '#000',
+                paddingRight: '40px',
               }}
             />
+            <span
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '40px',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon
+                icon={showConfirmPassword ? 'mdi:eye-off' : 'mdi:eye'}
+                width="24"
+                height="24"
+                color="#666"
+              />
+            </span>
           </Form.Group>
 
           <Button
@@ -181,8 +220,12 @@ export default function SignupScreen() {
               transition: 'background-color 0.3s ease',
               marginBottom: '15px',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#218838')}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#28a745')}
+            onMouseOver={(e) =>
+              (e.currentTarget.style.backgroundColor = '#218838')
+            }
+            onMouseOut={(e) =>
+              (e.currentTarget.style.backgroundColor = '#28a745')
+            }
           >
             Sign Up
           </Button>
@@ -196,7 +239,10 @@ export default function SignupScreen() {
           }}
         >
           Already have an account?{' '}
-          <Link to={`/signin?redirect=${redirect}`} style={{ color: '#28a745', fontWeight: '600' }}>
+          <Link
+            to={`/signin?redirect=${redirect}`}
+            style={{ color: '#28a745', fontWeight: '600' }}
+          >
             Sign In
           </Link>
         </div>

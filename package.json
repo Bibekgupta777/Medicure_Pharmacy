@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/basir/mern-foodie#readme",
   "dependencies": {
+    "@iconify/react": "^6.0.0",
     "bootstrap": "^5.3.7",
     "cors": "^2.8.5",
     "multer": "^2.0.1",
