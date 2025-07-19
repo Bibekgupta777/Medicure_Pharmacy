@@ -133,26 +133,19 @@ export default function OrderHistoryScreen() {
                     <p>
                       <strong>Total Price: </strong>Rs{order.totalPrice.toFixed(2)}
                     </p>
-                    <p>
-                      <strong>Payment Status: </strong>{' '}
-                      <span
-                        style={{
-                          color:
-                            order.paymentMethod === 'COD'
-                              ? '#e67e22'
-                              : order.isPaid
-                              ? '#27ae60'
-                              : '#e74c3c',
-                          fontWeight: '600',
-                        }}
-                      >
-                        {order.paymentMethod === 'COD'
-                          ? 'COD'
-                          : order.isPaid
-                          ? 'Paid'
-                          : 'Not Paid'}
-                      </span>
-                    </p>
+                   <p>
+  <strong>Payment Method: </strong>{' '}
+  <span
+    style={{
+      color: order.paymentMethod === 'COD' ? '#e67e22' : '#27ae60',
+      fontWeight: '600',
+      textTransform: 'uppercase',
+    }}
+  >
+    {order.paymentMethod === 'COD' ? 'COD' : 'ONLINE'}
+  </span>
+</p>
+
                     <p>
                       <strong>Order Status: </strong>{' '}
                       {order.isCancelled ? (
@@ -169,13 +162,13 @@ export default function OrderHistoryScreen() {
                         style={{
                           color:
                             order.deliveryStatus === 'pending'
-                              ? '#f39c12' // amber
+                              ? '#f39c12'
                               : order.deliveryStatus === 'out for delivery'
-                              ? '#2980b9' // blue
+                              ? '#2980b9'
                               : order.deliveryStatus === 'delivered'
-                              ? '#27ae60' // green
+                              ? '#27ae60'
                               : order.deliveryStatus === 'cancelled'
-                              ? '#e74c3c' // red
+                              ? '#e74c3c'
                               : '#000',
                           fontWeight: '600',
                           textTransform: 'capitalize',
@@ -194,13 +187,7 @@ export default function OrderHistoryScreen() {
                       <Link to={`/order/${order._id}`} style={detailsBtnStyle}>
                         <MdInfo size={20} /> Details
                       </Link>
-                      <button
-                        onClick={() => downloadReport(order._id)}
-                        style={downloadBtnStyle}
-                        aria-label="Download Order Report PDF"
-                      >
-                        <MdDownload size={20} /> Download
-                      </button>
+                      
                       <button
                         onClick={() => cancelOrderHandler(order._id)}
                         style={cancelBtnStyle}

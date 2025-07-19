@@ -174,7 +174,7 @@ export default function StripeCheckoutForm() {
             disabled={!stripe || loading}
             style={{ fontWeight: "600", fontSize: "1.1rem" }}
           >
-            {loading ? "Processing..." : `Pay $${(amount / 1).toFixed(2)}`}
+            {loading ? "Processing..." : `Pay `}
           </Button>
         </Form>
       </div>

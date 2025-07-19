@@ -13,6 +13,7 @@ export default function ForgetPasswordScreen() {
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const { state } = useContext(Store);
   const { userInfo } = state;
@@ -30,6 +31,7 @@ export default function ForgetPasswordScreen() {
       const { data } = await Axios.post('/api/users/forgot-password', { email });
       toast.success(data.message);
       setEmail('');
+      setSubmitted(true); // Mark that user submitted the form
     } catch (err) {
       toast.error(err.response ? err.response.data.message : 'Something went wrong');
     }
@@ -56,26 +58,34 @@ export default function ForgetPasswordScreen() {
         Forgot Password
       </h1>
 
-      <Form onSubmit={submitHandler}>
-        <Form.Group className="mb-4" controlId="email">
-          <Form.Label style={{ fontWeight: '600', fontSize: '1.1rem' }}>Email Address</Form.Label>
-          <Form.Control
-            type="email"
-            placeholder="Enter your registered email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-            style={{ padding: '0.75rem', fontSize: '1rem' }}
-          />
-        </Form.Group>
+      {!submitted ? (
+        <Form onSubmit={submitHandler}>
+          <Form.Group className="mb-4" controlId="email">
+            <Form.Label style={{ fontWeight: '600', fontSize: '1.1rem' }}>Email Address</Form.Label>
+            <Form.Control
+              type="email"
+              placeholder="Enter your registered email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+              style={{ padding: '0.75rem', fontSize: '1rem' }}
+            />
+          </Form.Group>
 
-        <div className="d-grid">
-          <Button type="submit" disabled={loading} style={{ padding: '0.75rem', fontSize: '1.1rem' }}>
-            {loading ? 'Submitting...' : 'Submit'}
-          </Button>
+          <div className="d-grid">
+            <Button type="submit" disabled={loading} style={{ padding: '0.75rem', fontSize: '1.1rem' }}>
+              {loading ? 'Submitting...' : 'Submit'}
+            </Button>
+          </div>
+        </Form>
+      ) : (
+        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '1.1rem', color: '#555' }}>
+          <p>
+            We've sent a link to your email. Please check your inbox and click the link to be redirected to your profile page.
+          </p>
         </div>
-      </Form>
+      )}
     </Container>
   );
 }
