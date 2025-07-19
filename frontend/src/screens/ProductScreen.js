@@ -211,7 +211,7 @@ function ProductScreen() {
                 <h3 className="text-success mt-3">
                   {new Intl.NumberFormat("en-IN", {
                     style: "currency",
-                    currency: "INR",
+                    currency: "NRS",
                   }).format(product.price)}
                 </h3>
 

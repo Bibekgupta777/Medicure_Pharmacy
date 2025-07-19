@@ -35,7 +35,7 @@ export default function Product({ product, imgClassName, addToCartHandler }) {
   const handleAddToCart = addToCartHandler || internalAddToCartHandler;
 
   const formatPrice = (price) =>
-    price.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+    price.toLocaleString('en-IN', { style: 'currency', currency: 'NRS' });
 
   return (
     <>
